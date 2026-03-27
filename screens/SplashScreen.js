@@ -1,84 +1,12 @@
-/*import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { COLORS } from "../constants/colors";
-
-export default function SplashScreen() {
-  return (
-    <View style={styles.container}>
-      
-      <View style={styles.centerContent}>
-        <Text style={styles.title}>Welcome to</Text>
-        <Text style={styles.brand}>Innovest</Text>
-
-        <Text style={styles.subtitle}>
-          Discover and invest in innovative ideas from creators around the world.
-        </Text>
-      </View>
-
-      <TouchableOpacity style={styles.button}>
-        <Text style={styles.buttonText}>Continue →</Text>
-      </TouchableOpacity>
-
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 80,
-    paddingHorizontal: 20,
-  },
-
-  centerContent: {
-    alignItems: "center",
-  },
-
-  title: {
-    fontSize: 24,
-    color: "#fff",
-    marginBottom: 5,
-  },
-
-  brand: {
-    fontSize: 42,
-    fontWeight: "bold",
-    color: "#FFE5B4",
-  },
-
-  subtitle: {
-    textAlign: "center",
-    marginTop: 20,
-    color: "#fff",
-    fontSize: 14,
-    lineHeight: 20,
-  },
-
-  button: {
-    backgroundColor: COLORS.primary,
-    width: "90%",
-    padding: 18,
-    borderRadius: 40,
-    alignItems: "center",
-
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-});
-*/
-
-import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
-import { COLORS } from "../constants/colors";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
+  Dimensions,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -86,73 +14,107 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useEffect } from "react";
+import { useNavigation } from "@react-navigation/native";
+
+const { width } = Dimensions.get("window");
 
 export default function SplashScreen() {
-  
+  const navigation = useNavigation();
+
   const scale = useSharedValue(1);
 
   useEffect(() => {
-    scale.value = withRepeat(withTiming(1.2, { duration: 1000 }), -1, true);
+    scale.value = withRepeat(withTiming(1.15, { duration: 1200 }), -1, true);
   }, []);
 
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: scale.value }],
-    };
-  });
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={["#F28C8C", "#F8D7DA"]}
+      style={styles.container}
+    >
+      {/* TOP DESIGN WAVES */}
+      <View style={styles.wave1} />
+      <View style={styles.wave2} />
 
-      {/* Top Illustration */}
+      {/* BULB */}
       <Animated.Image
-        source={require("../assets/images/bulb.jpeg")}
-        style={[styles.image, animatedStyle]}
+        source={require("../assets/images/bulb.png")}
+        style={[styles.bulb, animatedStyle]}
+        resizeMode="contain"
       />
 
-      {/* Text */}
-      <View style={styles.textContainer}>
+      {/* TEXT */}
+      <View style={styles.textBox}>
         <Text style={styles.title}>Welcome to</Text>
+
         <Text style={styles.brand}>Innovest</Text>
+
         <Text style={styles.subtitle}>
-          Discover and invest in innovative ideas from creators around the world.
+          Turn your ideas into investments 💰
         </Text>
       </View>
 
-      {/* Bottom Card */}
+      {/* BOTTOM CARD */}
       <View style={styles.bottomCard}>
-        <TouchableOpacity style={styles.button}>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => navigation.navigate("SignIn")}
+        >
           <Text style={styles.buttonText}>Continue →</Text>
         </TouchableOpacity>
 
+        {/* DOTS */}
         <View style={styles.dots}>
-          <View style={styles.dotActive} />
+          <View style={styles.activeDot} />
           <View style={styles.dot} />
         </View>
       </View>
-
-    </View>
+    </LinearGradient>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8D7DA",
     alignItems: "center",
     justifyContent: "space-between",
     paddingTop: 80,
   },
 
-  image: {
-    width: 180,
-    height: 180,
+  /* WAVES (FIGMA STYLE BACKGROUND) */
+  wave1: {
+    position: "absolute",
+    top: 0,
+    width: "120%",
+    height: 200,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderBottomLeftRadius: 150,
+    borderBottomRightRadius: 150,
+  },
+
+  wave2: {
+    position: "absolute",
+    top: 80,
+    width: "140%",
+    height: 200,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderBottomLeftRadius: 200,
+    borderBottomRightRadius: 200,
+  },
+
+  /* BULB (BIG + CENTERED 🔥) */
+  bulb: {
+    width: width * 0.5,   // BIG SIZE
+    height: width * 0.5,
     marginTop: 40,
   },
 
-  textContainer: {
+  textBox: {
     alignItems: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal: 30,
   },
 
   title: {
@@ -162,25 +124,35 @@ const styles = StyleSheet.create({
   },
 
   brand: {
-    fontSize: 42,
+    fontSize: 48,
     fontWeight: "bold",
     color: "#FFE5B4",
-    marginVertical: 10,
+
+    textShadowColor: "rgba(255, 223, 120, 0.9)",
+    textShadowOffset: { width: 0, height: 6 },
+    textShadowRadius: 12,
   },
 
   subtitle: {
     textAlign: "center",
     color: "#fff",
-    fontSize: 14,
+    fontSize: 16,
+    marginTop: 10,
   },
 
+  /* BOTTOM CARD */
   bottomCard: {
     width: "100%",
     backgroundColor: "#fff",
     borderTopLeftRadius: 40,
     borderTopRightRadius: 40,
-    padding: 30,
+    padding: 25,
     alignItems: "center",
+
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 10,
   },
 
   button: {
@@ -190,15 +162,16 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     alignItems: "center",
 
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
+    shadowColor: "#F28C8C",
+    shadowOpacity: 0.4,
     shadowRadius: 10,
-    elevation: 5,
+    elevation: 8,
   },
 
   buttonText: {
     color: "#fff",
     fontWeight: "bold",
+    fontSize: 16,
   },
 
   dots: {
@@ -206,7 +179,7 @@ const styles = StyleSheet.create({
     marginTop: 15,
   },
 
-  dotActive: {
+  activeDot: {
     width: 8,
     height: 8,
     backgroundColor: "#F28C8C",
