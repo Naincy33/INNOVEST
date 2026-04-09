@@ -9,35 +9,66 @@ import {
 import { useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 
+// 🔥 Firebase
+import { addDoc, collection } from "firebase/firestore";
+import { db } from "../firebase";
+
 export default function PostScreen({ navigation }) {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
   const [problem, setProblem] = useState("");
   const [solution, setSolution] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = () => {
+  // 🔥 SUBMIT FUNCTION (REAL FIRESTORE)
+  const handleSubmit = async () => {
     if (!title || !problem || !solution) {
       alert("Fill all fields 😅");
       return;
     }
 
-    alert("🎉 Idea Posted!");
-    navigation.goBack();
+    try {
+      setLoading(true);
+
+      await addDoc(collection(db, "ideas"), {
+        title,
+        category,
+        problem,
+        solution,
+        coins: 0,
+        likes: 0,
+        createdAt: Date.now(),
+      });
+
+      alert("🎉 Idea Posted Successfully!");
+
+      // reset fields
+      setTitle("");
+      setCategory("");
+      setProblem("");
+      setSolution("");
+
+      navigation.goBack();
+    } catch (error) {
+      alert("Error: " + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       
-      {/* HEADER */}
+      {/* 🔥 HEADER */}
       <LinearGradient colors={["#FF8C94", "#FFB6C1"]} style={styles.header}>
         <Text style={styles.heading}>Post Your Idea 🚀</Text>
       </LinearGradient>
 
-      {/* FORM */}
+      {/* 🔥 FORM */}
       <View style={styles.card}>
-        <Text>Title</Text>
+        <Text style={styles.label}>Title</Text>
         <TextInput
-          placeholder="Enter idea"
+          placeholder="Enter your idea title"
           value={title}
           onChangeText={setTitle}
           style={styles.input}
@@ -45,9 +76,9 @@ export default function PostScreen({ navigation }) {
       </View>
 
       <View style={styles.card}>
-        <Text>Category</Text>
+        <Text style={styles.label}>Category</Text>
         <TextInput
-          placeholder="Tech / AI / etc"
+          placeholder="Tech / AI / Health etc"
           value={category}
           onChangeText={setCategory}
           style={styles.input}
@@ -55,39 +86,50 @@ export default function PostScreen({ navigation }) {
       </View>
 
       <View style={styles.card}>
-        <Text>Problem</Text>
+        <Text style={styles.label}>Problem</Text>
         <TextInput
-          placeholder="Problem"
+          placeholder="What problem are you solving?"
           value={problem}
           onChangeText={setProblem}
-          style={styles.input}
+          style={[styles.input, { height: 100 }]}
           multiline
         />
       </View>
 
       <View style={styles.card}>
-        <Text>Solution</Text>
+        <Text style={styles.label}>Solution</Text>
         <TextInput
-          placeholder="Solution"
+          placeholder="Describe your solution"
           value={solution}
           onChangeText={setSolution}
-          style={styles.input}
+          style={[styles.input, { height: 100 }]}
           multiline
         />
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-        <Text style={{ color: "#fff" }}>Submit Idea</Text>
+      {/* 🔥 BUTTON */}
+      <TouchableOpacity
+        style={styles.button}
+        onPress={handleSubmit}
+        disabled={loading}
+      >
+        <Text style={styles.btnText}>
+          {loading ? "Posting..." : "Submit Idea"}
+        </Text>
       </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFF5F7" },
+  container: {
+    flex: 1,
+    backgroundColor: "#FFF5F7",
+  },
 
   header: {
     padding: 30,
+    paddingTop: 60,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
   },
@@ -103,12 +145,22 @@ const styles = StyleSheet.create({
     margin: 15,
     padding: 15,
     borderRadius: 15,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+
+  label: {
+    fontWeight: "600",
+    marginBottom: 5,
   },
 
   input: {
     borderBottomWidth: 1,
-    marginTop: 10,
-    padding: 5,
+    borderColor: "#ddd",
+    padding: 8,
+    marginTop: 5,
   },
 
   button: {
@@ -117,5 +169,10 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 20,
     alignItems: "center",
+  },
+
+  btnText: {
+    color: "#fff",
+    fontWeight: "bold",
   },
 });

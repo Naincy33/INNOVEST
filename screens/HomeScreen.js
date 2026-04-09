@@ -9,6 +9,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
+import { db } from "../firebase";
 
 const initialIdeas = [
   {
@@ -34,7 +35,7 @@ export default function HomeScreen({ navigation }) {
   // ❤️ LIKE
   const handleLike = (id) => {
     const updated = ideas.map((item) =>
-      item.id === id ? { ...item, likes: item.likes + 1 } : item
+      item.id === id ? { ...item, likes: item.likes + 1 } : item,
     );
     setIdeas(updated);
   };
@@ -53,7 +54,6 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      
       {/* 🔥 HEADER */}
       <LinearGradient colors={["#FF8C94", "#FFB6C1"]} style={styles.header}>
         <View style={styles.headerTop}>

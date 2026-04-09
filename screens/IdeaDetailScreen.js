@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { db } from "../firebase";
 
 export default function IdeaDetailScreen({ route }) {
   const { idea, investAmount } = route.params;

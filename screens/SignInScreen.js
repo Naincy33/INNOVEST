@@ -15,6 +15,7 @@ import {
 } from "firebase/auth";
 
 import { auth } from "../firebase";
+import { db } from "../firebase";
 
 export default function SignInScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);

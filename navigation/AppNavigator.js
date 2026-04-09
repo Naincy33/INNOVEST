@@ -3,6 +3,8 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 
+
+
 // Screens
 import SplashScreen from "../screens/SplashScreen";
 import SignInScreen from "../screens/SignInScreen";
@@ -12,6 +14,7 @@ import IdeaDetailScreen from "../screens/IdeaDetailScreen";
 import PostScreen from "../screens/PostScreen";
 import PortfolioScreen from "../screens/PortfolioScreen";
 import LeaderboardScreen from "../screens/LeaderboardScreen";
+import ProfileScreen from "../screens/ProfileScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -42,7 +45,7 @@ function BottomTabs() {
       <Tab.Screen name="Post" component={PostScreen} />
       <Tab.Screen name="Portfolio" component={PortfolioScreen} />
       <Tab.Screen name="Leaderboard" component={LeaderboardScreen} />
-      <Tab.Screen name="Profile" component={HomeScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
 }
