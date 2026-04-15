@@ -1,4 +1,5 @@
 import {
+
   View,
   Text,
   StyleSheet,
@@ -8,52 +9,122 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
-import { db } from "../firebase";
+import { useState, useEffect } from "react";
 
-const initialIdeas = [
-  {
-    id: 1,
-    title: "AI Resume Builder",
-    desc: "Smart AI resumes",
-    coins: 5420,
-    likes: 328,
-  },
-  {
-    id: 2,
-    title: "Eco Packaging",
-    desc: "Sustainable business idea",
-    coins: 3850,
-    likes: 215,
-  },
-];
+// 🔥 FIREBASE
+import {
+  collection,
+  onSnapshot,
+  updateDoc,
+  doc,
+  addDoc,
+  getDoc, 
+} from "firebase/firestore";
+
+import { onAuthStateChanged } from "firebase/auth";
+import { db, auth } from "../firebase";
 
 export default function HomeScreen({ navigation }) {
-  const [ideas, setIdeas] = useState(initialIdeas);
-  const [balance, setBalance] = useState(10000);
+  const [ideas, setIdeas] = useState([]);
+  const [balance, setBalance] = useState(0);
+  const [userId, setUserId] = useState(null);
+
+  // 🔥 GET USER + COINS
+  useEffect(() => {
+    let unsubscribeUser;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setUserId(user.uid);
+
+        // 🔥 fetch user coins
+        unsubscribeUser = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
+          if (docSnap.exists()) {
+            setBalance(docSnap.data().coins || 0);
+          }
+        });
+      }
+    });
+
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeUser) unsubscribeUser();
+    };
+  }, []);
+
+  // 🔥 FETCH IDEAS (LIVE)
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "ideas"), (snapshot) => {
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      setIdeas(data);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // ❤️ LIKE
-  const handleLike = (id) => {
-    const updated = ideas.map((item) =>
-      item.id === id ? { ...item, likes: item.likes + 1 } : item,
-    );
-    setIdeas(updated);
-  };
+  const handleLike = async (item) => {
+  await updateDoc(doc(db, "ideas", item.id), {
+    likes: (item.likes || 0) + 1,
+  });
 
-  // 💰 INVEST
-  const handleInvest = (item) => {
-    if (balance < 100) {
-      alert("Not enough coins 😢");
-      return;
-    }
+  // 🔥 owner ko coins do
+  const ownerRef = doc(db, "users", item.userId);
+  const snap = await getDoc(ownerRef);
 
-    setBalance(balance - 100);
+  await updateDoc(ownerRef, {
+    coins: snap.data().coins + 10,
+  });
+};
 
-    navigation.navigate("IdeaDetail", { idea: item });
-  };
+  // 💰 INVEST (FULL SYSTEM 🔥)
+  // same imports as before
+
+// 🔥 INVEST FIX (IMPORTANT CHANGE)
+const handleInvest = async (item) => {
+  if (balance < 100) {
+    alert("Not enough coins 😢");
+    return;
+  }
+
+  try {
+    const userRef = doc(db, "users", userId);
+    const userSnap = await getDoc(userRef);
+    const userData = userSnap.data();
+
+    // 1️⃣ update idea coins
+    await updateDoc(doc(db, "ideas", item.id), {
+      coins: (item.coins || 0) + 100,
+    });
+
+    // 2️⃣ update user coins
+    await updateDoc(userRef, {
+      coins: userData.coins - 100,
+    });
+
+    // 3️⃣ save investment WITH NAME
+    await addDoc(collection(db, "investments"), {
+      userId: userId,
+      userName: userData.name,
+      ideaId: item.id,
+      ideaTitle: item.title,
+      amount: 100,
+      createdAt: Date.now(),
+    });
+
+    alert("Invested 🚀");
+  } catch (err) {
+    alert(err.message);
+  }
+};
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={styles.container}>
+      
       {/* 🔥 HEADER */}
       <LinearGradient colors={["#FF8C94", "#FFB6C1"]} style={styles.header}>
         <View style={styles.headerTop}>
@@ -62,63 +133,28 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.coins}>💰 {balance}</Text>
           </View>
 
-          <TouchableOpacity style={styles.bell}>
-            <Ionicons name="notifications" size={20} color="#fff" />
-          </TouchableOpacity>
+          <Ionicons name="notifications" size={20} color="#fff" />
         </View>
 
-        {/* SEARCH */}
         <View style={styles.searchBox}>
           <Ionicons name="search" size={18} color="#999" />
           <TextInput placeholder="Search ideas..." style={styles.input} />
         </View>
       </LinearGradient>
 
-      {/* 🔥 TRENDING */}
-      <Text style={styles.sectionTitle}>🔥 Trending</Text>
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {ideas.map((item) => (
-          <View key={item.id} style={styles.card}>
-            <Text style={styles.cardTitle}>{item.title}</Text>
-            <Text style={styles.cardDesc}>{item.desc}</Text>
-
-            <View style={styles.row}>
-              <Text>💰 {item.coins}</Text>
-              <Text>❤️ {item.likes}</Text>
-            </View>
-
-            <View style={styles.row}>
-              <TouchableOpacity onPress={() => handleLike(item.id)}>
-                <Text style={styles.like}>❤️ Like</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.investBtn}
-                onPress={() => handleInvest(item)}
-              >
-                <Text style={styles.btnText}>Invest</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
-      </ScrollView>
-
-      {/* 🔥 NEW IDEAS */}
-      <Text style={styles.sectionTitle}>✨ New Ideas</Text>
-
+      {/* 🔥 IDEAS */}
       {ideas.map((item) => (
         <View key={item.id} style={styles.cardFull}>
           <Text style={styles.cardTitle}>{item.title}</Text>
-          <Text style={styles.cardDesc}>{item.desc}</Text>
+          <Text style={styles.cardDesc}>{item.category}</Text>
 
           <View style={styles.row}>
-            <Text>💰 {item.coins}</Text>
-            <Text>❤️ {item.likes}</Text>
+            <Text>💰 {item.coins || 0}</Text>
+            <Text>❤️ {item.likes || 0}</Text>
           </View>
 
           <View style={styles.row}>
-            <TouchableOpacity onPress={() => handleLike(item.id)}>
+            <TouchableOpacity onPress={() => handleLike(item)}>
               <Text style={styles.like}>❤️ Like</Text>
             </TouchableOpacity>
 
@@ -134,7 +170,6 @@ export default function HomeScreen({ navigation }) {
     </ScrollView>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

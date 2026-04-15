@@ -3,24 +3,51 @@ import {
   Text,
   StyleSheet,
   TextInput,
-  TouchableOpacity,
   ScrollView,
+  TouchableOpacity,
 } from "react-native";
-import { useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
+import { useState } from "react";
 
-// 🔥 Firebase
-import { addDoc, collection } from "firebase/firestore";
-import { db } from "../firebase";
+// 🔥 FIREBASE
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  updateDoc,
+} from "firebase/firestore";
+import { db, auth } from "../firebase";
+
+import { generateIdea } from "../utils/ai";
 
 export default function PostScreen({ navigation }) {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
   const [problem, setProblem] = useState("");
   const [solution, setSolution] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  // 🔥 SUBMIT FUNCTION (REAL FIRESTORE)
+  // 🔥 AI FUNCTION (FIXED)
+  const handleAI = async () => {
+    try {
+      const idea = await generateIdea();
+
+      // 👉 agar object return ho raha hai
+      if (typeof idea === "object") {
+        setTitle(idea.title || "");
+        setProblem(idea.problem || "");
+        setSolution(idea.solution || "");
+        setCategory("AI Generated");
+      } else {
+        alert(idea); // fallback
+      }
+    } catch (err) {
+      console.log(err);
+      alert("AI error 😢");
+    }
+  };
+
+  // 🔥 SUBMIT
   const handleSubmit = async () => {
     if (!title || !problem || !solution) {
       alert("Fill all fields 😅");
@@ -28,47 +55,54 @@ export default function PostScreen({ navigation }) {
     }
 
     try {
-      setLoading(true);
+      const user = auth.currentUser;
 
+      // 🔥 SAVE IDEA
       await addDoc(collection(db, "ideas"), {
         title,
         category,
         problem,
         solution,
+        userId: user.uid,
         coins: 0,
         likes: 0,
         createdAt: Date.now(),
       });
 
-      alert("🎉 Idea Posted Successfully!");
+      // 🔥 USER COINS +200
+      const userRef = doc(db, "users", user.uid);
+      const snap = await getDoc(userRef);
 
-      // reset fields
-      setTitle("");
-      setCategory("");
-      setProblem("");
-      setSolution("");
+      const currentCoins = snap.data().coins;
 
+      await updateDoc(userRef, {
+        coins: currentCoins + 200,
+      });
+
+      alert("🎉 Idea Posted +200 coins earned!");
       navigation.goBack();
-    } catch (error) {
-      alert("Error: " + error.message);
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      alert(err.message);
     }
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={styles.container}>
       
-      {/* 🔥 HEADER */}
+      {/* HEADER */}
       <LinearGradient colors={["#FF8C94", "#FFB6C1"]} style={styles.header}>
         <Text style={styles.heading}>Post Your Idea 🚀</Text>
       </LinearGradient>
 
-      {/* 🔥 FORM */}
+      {/* AI BUTTON 🔥 */}
+      <TouchableOpacity style={styles.aiBtn} onPress={handleAI}>
+        <Text style={{ color: "#fff" }}>🤖 Generate Idea</Text>
+      </TouchableOpacity>
+
+      {/* FORM */}
       <View style={styles.card}>
-        <Text style={styles.label}>Title</Text>
+        <Text>Title</Text>
         <TextInput
-          placeholder="Enter your idea title"
           value={title}
           onChangeText={setTitle}
           style={styles.input}
@@ -76,9 +110,8 @@ export default function PostScreen({ navigation }) {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.label}>Category</Text>
+        <Text>Category</Text>
         <TextInput
-          placeholder="Tech / AI / Health etc"
           value={category}
           onChangeText={setCategory}
           style={styles.input}
@@ -86,50 +119,39 @@ export default function PostScreen({ navigation }) {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.label}>Problem</Text>
+        <Text>Problem</Text>
         <TextInput
-          placeholder="What problem are you solving?"
           value={problem}
           onChangeText={setProblem}
-          style={[styles.input, { height: 100 }]}
+          style={styles.input}
           multiline
         />
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.label}>Solution</Text>
+        <Text>Solution</Text>
         <TextInput
-          placeholder="Describe your solution"
           value={solution}
           onChangeText={setSolution}
-          style={[styles.input, { height: 100 }]}
+          style={styles.input}
           multiline
         />
       </View>
 
-      {/* 🔥 BUTTON */}
-      <TouchableOpacity
-        style={styles.button}
-        onPress={handleSubmit}
-        disabled={loading}
-      >
-        <Text style={styles.btnText}>
-          {loading ? "Posting..." : "Submit Idea"}
-        </Text>
+      {/* SUBMIT */}
+      <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+        <Text style={{ color: "#fff" }}>Submit Idea</Text>
       </TouchableOpacity>
     </ScrollView>
   );
 }
 
+// 🎨 STYLES
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FFF5F7",
-  },
+  container: { flex: 1, backgroundColor: "#FFF5F7" },
 
   header: {
     padding: 30,
-    paddingTop: 60,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
   },
@@ -140,27 +162,25 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
 
+  aiBtn: {
+    backgroundColor: "#6C63FF",
+    margin: 15,
+    padding: 12,
+    borderRadius: 15,
+    alignItems: "center",
+  },
+
   card: {
     backgroundColor: "#fff",
     margin: 15,
     padding: 15,
     borderRadius: 15,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 3,
-  },
-
-  label: {
-    fontWeight: "600",
-    marginBottom: 5,
   },
 
   input: {
     borderBottomWidth: 1,
-    borderColor: "#ddd",
-    padding: 8,
-    marginTop: 5,
+    marginTop: 10,
+    padding: 5,
   },
 
   button: {
@@ -169,10 +189,5 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 20,
     alignItems: "center",
-  },
-
-  btnText: {
-    color: "#fff",
-    fontWeight: "bold",
   },
 });

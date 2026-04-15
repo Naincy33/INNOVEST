@@ -9,13 +9,16 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 
+// 🔥 FIREBASE AUTH
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
 } from "firebase/auth";
 
-import { auth } from "../firebase";
-import { db } from "../firebase";
+// 🔥 FIRESTORE
+import { doc, setDoc, getDoc } from "firebase/firestore";
+
+import { auth, db } from "../firebase";
 
 export default function SignInScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
@@ -26,9 +29,28 @@ export default function SignInScreen({ navigation }) {
   // 🔥 LOGIN
   const handleLogin = async () => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      alert("Login Success 🚀");
-      navigation.replace("HomeTabs"); // 👉 redirect
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+
+      const user = userCredential.user;
+
+      // 🔥 CHECK USER EXISTS IN DB
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+
+      // 🔥 AGAR NAHI HAI → CREATE KAR
+      if (!userSnap.exists()) {
+        await setDoc(userRef, {
+          name: "User",
+          coins: 10000,
+          createdAt: Date.now(),
+        });
+      }
+
+      navigation.replace("HomeTabs");
     } catch (error) {
       alert(error.message);
     }
@@ -37,9 +59,23 @@ export default function SignInScreen({ navigation }) {
   // 🔥 SIGNUP
   const handleSignup = async () => {
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+
+      const user = userCredential.user;
+
+      // 🔥 NEW USER → AUTO CREATE
+      await setDoc(doc(db, "users", user.uid), {
+        name: "User",
+        coins: 10000,
+        createdAt: Date.now(),
+      });
+
       alert("Account Created 🎉");
-      navigation.replace("Home"); // 👉 direct home
+      navigation.replace("HomeTabs");
     } catch (error) {
       alert(error.message);
     }
@@ -64,8 +100,10 @@ export default function SignInScreen({ navigation }) {
           <Ionicons name="bulb" size={28} color="#FFD700" />
         </View>
 
-        <Text style={styles.title}>Sign In</Text>
-        <Text style={styles.subtitle}>Welcome back to Innovest</Text>
+        <Text style={styles.title}>Welcome to Innovest</Text>
+        <Text style={styles.subtitle}>
+          Invest in ideas & grow your coins 🚀
+        </Text>
       </View>
 
       {/* CARD */}
@@ -140,14 +178,14 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: "bold",
     color: "#fff",
   },
 
   subtitle: {
     color: "#fff",
-    opacity: 0.8,
+    opacity: 0.9,
   },
 
   card: {
