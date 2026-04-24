@@ -1,20 +1,27 @@
-import OpenAI from "openai";
-
-const openai = new OpenAI({
-  apiKey: "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", // ⚠️ yaha apni key daal
-});
-
 export const generateIdea = async () => {
-  const res = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "user",
-        content:
-          "Give me 1 startup idea with title, problem and solution",
+  try {
+    const res = await fetch("http://192.168.1.54:5000/generate-idea", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
-    ],
-  });
+    });
 
-  return res.choices[0].message.content;
+    const data = await res.json();
+
+    if (typeof data.result === "string") {
+      return JSON.parse(data.result);
+    }
+
+    return data.result || data;
+
+  } catch (err) {
+    console.log("AI ERROR:", err);
+
+    return {
+      title: "AI Failed",
+      problem: "Backend not connected properly",
+      solution: "Check server / IP / route",
+    };
+  }
 };

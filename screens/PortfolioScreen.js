@@ -3,9 +3,11 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  Dimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useState, useEffect } from "react";
+import { LineChart } from "react-native-chart-kit";
 
 // 🔥 FIREBASE
 import {
@@ -29,49 +31,53 @@ export default function PortfolioScreen() {
     let unsubscribeFirestore;
 
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        const q = query(
-          collection(db, "investments"),
-          where("userId", "==", user.uid)
-        );
+      if (!user) return;
 
-        unsubscribeFirestore = onSnapshot(q, async (snapshot) => {
-          const data = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
+      const q = query(
+        collection(db, "investments"),
+        where("userId", "==", user.uid)
+      );
 
-          setInvestments(data);
+      unsubscribeFirestore = onSnapshot(q, async (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
 
-          let totalEarn = 0;
-          let detailedData = [];
+        setInvestments(data);
 
-          for (let inv of data) {
+        let totalEarn = 0;
+        let detailedData = [];
+
+        for (let inv of data) {
+          try {
             const ideaRef = doc(db, "ideas", inv.ideaId);
             const ideaSnap = await getDoc(ideaRef);
 
-            if (ideaSnap.exists()) {
-              const idea = ideaSnap.data();
-              const ideaCoins = idea.coins || 0;
+            if (!ideaSnap.exists()) continue;
 
-              // 🔥 earning logic
-              const earning = (ideaCoins * inv.amount) / 1000;
-              const roi = ((earning / inv.amount) * 100).toFixed(1);
+            const idea = ideaSnap.data();
+            const ideaCoins = idea.coins || 0;
 
-              totalEarn += earning;
+            // 🔥 earning logic
+            const earning = (ideaCoins * inv.amount) / 1000;
+            const roi = ((earning / inv.amount) * 100).toFixed(1);
 
-              detailedData.push({
-                ...inv,
-                earning: Math.floor(earning),
-                roi,
-              });
-            }
+            totalEarn += earning;
+
+            detailedData.push({
+              ...inv,
+              earning: Math.floor(earning),
+              roi,
+            });
+          } catch (err) {
+            console.log("Error:", err);
           }
+        }
 
-          setDetailed(detailedData);
-          setTotalEarnings(Math.floor(totalEarn));
-        });
-      }
+        setDetailed(detailedData);
+        setTotalEarnings(Math.floor(totalEarn));
+      });
     });
 
     return () => {
@@ -80,10 +86,33 @@ export default function PortfolioScreen() {
     };
   }, []);
 
+  // 🔥 TOTAL INVESTED
   const totalInvested = investments.reduce(
     (sum, i) => sum + (i.amount || 0),
     0
   );
+
+  // 🔥 GRAPH DATA
+  const screenWidth = Dimensions.get("window").width;
+
+  const grouped = {};
+  investments.forEach((item) => {
+    const date = new Date(item.createdAt).toLocaleDateString();
+
+    if (!grouped[date]) grouped[date] = 0;
+    grouped[date] += item.amount;
+  });
+
+  const chartData = {
+    labels: Object.keys(grouped).map((d) => d.slice(0, 5)),
+    datasets: [
+      {
+        data: Object.values(grouped).length
+          ? Object.values(grouped)
+          : [0],
+      },
+    ],
+  };
 
   return (
     <ScrollView style={styles.container}>
@@ -94,9 +123,7 @@ export default function PortfolioScreen() {
         style={styles.header}
       >
         <Text style={styles.title}>My Portfolio</Text>
-        <Text style={styles.subtitle}>
-          Smart investing 📈
-        </Text>
+        <Text style={styles.subtitle}>Smart investing 📈</Text>
       </LinearGradient>
 
       {/* STATS */}
@@ -112,31 +139,45 @@ export default function PortfolioScreen() {
         </View>
       </View>
 
+      {/* 🔥 GRAPH */}
+      {investments.length > 0 && (
+        <View style={{ margin: 20 }}>
+          <Text style={styles.section}>📈 Investment Trend</Text>
+
+          <LineChart
+            data={chartData}
+            width={screenWidth - 40}
+            height={220}
+            chartConfig={{
+              backgroundColor: "#fff",
+              backgroundGradientFrom: "#fff",
+              backgroundGradientTo: "#fff",
+              decimalPlaces: 0,
+              color: (opacity = 1) =>
+                `rgba(255, 140, 148, ${opacity})`,
+              labelColor: () => "#555",
+            }}
+            bezier
+            style={{ borderRadius: 20 }}
+          />
+        </View>
+      )}
+
       {/* LIST */}
       <Text style={styles.section}>Your Investments</Text>
 
       {detailed.map((item) => (
         <View key={item.id} style={styles.item}>
-          
-          <Text style={styles.idea}>
-            {item.ideaTitle}
-          </Text>
+          <Text style={styles.idea}>{item.ideaTitle}</Text>
 
           <View style={styles.rowBetween}>
             <Text>💰 Invested: {item.amount}</Text>
-            <Text style={styles.green}>
-              +{item.earning}
-            </Text>
+            <Text style={styles.green}>+{item.earning}</Text>
           </View>
 
           <View style={styles.rowBetween}>
-            <Text style={styles.gray}>
-              ROI: {item.roi}%
-            </Text>
-
-            <Text style={styles.tag}>
-              📈 Growing
-            </Text>
+            <Text style={styles.gray}>ROI: {item.roi}%</Text>
+            <Text style={styles.tag}>📈 Growing</Text>
           </View>
         </View>
       ))}

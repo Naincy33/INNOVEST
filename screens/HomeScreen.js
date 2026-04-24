@@ -1,14 +1,12 @@
 import {
-
   View,
   Text,
   StyleSheet,
-  TextInput,
   ScrollView,
   TouchableOpacity,
+  TextInput,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
 import { useState, useEffect } from "react";
 
 // 🔥 FIREBASE
@@ -18,158 +16,179 @@ import {
   updateDoc,
   doc,
   addDoc,
-  getDoc, 
+  increment,
 } from "firebase/firestore";
-
-import { onAuthStateChanged } from "firebase/auth";
 import { db, auth } from "../firebase";
 
 export default function HomeScreen({ navigation }) {
   const [ideas, setIdeas] = useState([]);
-  const [balance, setBalance] = useState(0);
-  const [userId, setUserId] = useState(null);
+  const [search, setSearch] = useState("");
+  const [userCoins, setUserCoins] = useState(0);
 
-  // 🔥 GET USER + COINS
+  // 🔥 FETCH IDEAS
   useEffect(() => {
-    let unsubscribeUser;
-
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setUserId(user.uid);
-
-        // 🔥 fetch user coins
-        unsubscribeUser = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
-          if (docSnap.exists()) {
-            setBalance(docSnap.data().coins || 0);
-          }
-        });
-      }
-    });
-
-    return () => {
-      unsubscribeAuth();
-      if (unsubscribeUser) unsubscribeUser();
-    };
-  }, []);
-
-  // 🔥 FETCH IDEAS (LIVE)
-  useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "ideas"), (snapshot) => {
+    const unsub = onSnapshot(collection(db, "ideas"), (snapshot) => {
       const data = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
-
       setIdeas(data);
     });
 
-    return () => unsubscribe();
+    return () => unsub();
+  }, []);
+
+  // 🔥 FETCH USER COINS
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const unsub = onSnapshot(doc(db, "users", user.uid), (snap) => {
+      if (snap.exists()) {
+        setUserCoins(snap.data().coins || 0);
+      }
+    });
+
+    return () => unsub();
   }, []);
 
   // ❤️ LIKE
   const handleLike = async (item) => {
-  await updateDoc(doc(db, "ideas", item.id), {
-    likes: (item.likes || 0) + 1,
-  });
+    try {
+      await updateDoc(doc(db, "ideas", item.id), {
+        likes: increment(1),
+      });
+    } catch (err) {
+      console.log("LIKE ERROR:", err);
+      alert("Like failed 😢");
+    }
+  };
 
-  // 🔥 owner ko coins do
-  const ownerRef = doc(db, "users", item.userId);
-  const snap = await getDoc(ownerRef);
+  // 💰 INVEST
+  const handleInvest = async (item) => {
+    try {
+      const user = auth.currentUser;
 
-  await updateDoc(ownerRef, {
-    coins: snap.data().coins + 10,
-  });
-};
+      if (!user) {
+        alert("Login required 😢");
+        return;
+      }
 
-  // 💰 INVEST (FULL SYSTEM 🔥)
-  // same imports as before
+      if (userCoins < 100) {
+        alert("Not enough coins 😢");
+        return;
+      }
 
-// 🔥 INVEST FIX (IMPORTANT CHANGE)
-const handleInvest = async (item) => {
-  if (balance < 100) {
-    alert("Not enough coins 😢");
-    return;
-  }
+      // 🔥 update idea coins
+      await updateDoc(doc(db, "ideas", item.id), {
+        coins: increment(100),
+      });
 
-  try {
-    const userRef = doc(db, "users", userId);
-    const userSnap = await getDoc(userRef);
-    const userData = userSnap.data();
+      // 🔥 update user coins
+      await updateDoc(doc(db, "users", user.uid), {
+        coins: increment(-100),
+      });
 
-    // 1️⃣ update idea coins
-    await updateDoc(doc(db, "ideas", item.id), {
-      coins: (item.coins || 0) + 100,
-    });
+      // 🔥 save investment
+      await addDoc(collection(db, "investments"), {
+        userId: user.uid,
+        ideaId: item.id,
+        ideaTitle: item.title,
+        amount: 100,
+        createdAt: Date.now(),
+      });
 
-    // 2️⃣ update user coins
-    await updateDoc(userRef, {
-      coins: userData.coins - 100,
-    });
+      alert("Invested 🚀");
+    } catch (err) {
+      console.log("INVEST ERROR:", err);
+      alert("Investment failed 😢");
+    }
+  };
 
-    // 3️⃣ save investment WITH NAME
-    await addDoc(collection(db, "investments"), {
-      userId: userId,
-      userName: userData.name,
-      ideaId: item.id,
-      ideaTitle: item.title,
-      amount: 100,
-      createdAt: Date.now(),
-    });
-
-    alert("Invested 🚀");
-  } catch (err) {
-    alert(err.message);
-  }
-};
+  // 🔍 SEARCH
+  const filteredIdeas = ideas.filter(
+    (item) =>
+      item.title?.toLowerCase().includes(search.toLowerCase()) ||
+      item.category?.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <ScrollView style={styles.container}>
-      
-      {/* 🔥 HEADER */}
+      {/* HEADER */}
       <LinearGradient colors={["#FF8C94", "#FFB6C1"]} style={styles.header}>
-        <View style={styles.headerTop}>
-          <View>
-            <Text style={styles.heading}>Discover Ideas 💡</Text>
-            <Text style={styles.coins}>💰 {balance}</Text>
-          </View>
+        <Text style={styles.heading}>Discover Ideas 💡</Text>
+        <Text style={styles.coins}>💰 {userCoins}</Text>
 
-          <Ionicons name="notifications" size={20} color="#fff" />
-        </View>
-
-        <View style={styles.searchBox}>
-          <Ionicons name="search" size={18} color="#999" />
-          <TextInput placeholder="Search ideas..." style={styles.input} />
-        </View>
+        <TextInput
+          placeholder="Search ideas..."
+          style={styles.search}
+          value={search}
+          onChangeText={setSearch}
+        />
       </LinearGradient>
 
-      {/* 🔥 IDEAS */}
-      {ideas.map((item) => (
-        <View key={item.id} style={styles.cardFull}>
-          <Text style={styles.cardTitle}>{item.title}</Text>
-          <Text style={styles.cardDesc}>{item.category}</Text>
+      {/* IDEAS */}
+      {filteredIdeas.map((item) => {
+        const isTrending =
+          (item.coins || 0) > 500 || (item.likes || 0) > 5;
 
-          <View style={styles.row}>
-            <Text>💰 {item.coins || 0}</Text>
-            <Text>❤️ {item.likes || 0}</Text>
+        return (
+          <View key={item.id} style={styles.card}>
+            {/* TITLE */}
+            <View style={styles.rowBetween}>
+              <Text style={styles.title}>{item.title}</Text>
+
+              {isTrending && (
+                <Text style={styles.trending}>🔥 Trending</Text>
+              )}
+            </View>
+
+            {/* CATEGORY */}
+            <Text style={styles.category}>{item.category}</Text>
+
+            {/* CONTENT */}
+            <Text style={styles.text}>🧠 {item.problem}</Text>
+            <Text style={styles.text}>💡 {item.solution}</Text>
+
+            {/* STATS */}
+            <View style={styles.rowBetween}>
+              <Text>💰 {item.coins || 0}</Text>
+              <Text>❤️ {item.likes || 0}</Text>
+            </View>
+
+            {/* ACTIONS */}
+            <View style={styles.actions}>
+              <TouchableOpacity onPress={() => handleLike(item)}>
+                <Text style={styles.like}>❤️ Like</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() =>
+                  navigation.navigate("Comments", { idea: item })
+                }
+              >
+                <Text style={styles.comment}>💬 Comments</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.investBtn}
+                onPress={() => handleInvest(item)}
+              >
+                <Text style={styles.btnText}>Invest</Text>
+              </TouchableOpacity>
+            </View>
           </View>
+        );
+      })}
 
-          <View style={styles.row}>
-            <TouchableOpacity onPress={() => handleLike(item)}>
-              <Text style={styles.like}>❤️ Like</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.investBtn}
-              onPress={() => handleInvest(item)}
-            >
-              <Text style={styles.btnText}>Invest</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      ))}
+      {filteredIdeas.length === 0 && (
+        <Text style={styles.empty}>No results 😢</Text>
+      )}
     </ScrollView>
   );
 }
+
+// 🎨 STYLES
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -183,16 +202,10 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 30,
   },
 
-  headerTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
   heading: {
     color: "#fff",
-    fontSize: 20,
-    fontWeight: "600",
+    fontSize: 22,
+    fontWeight: "bold",
   },
 
   coins: {
@@ -200,68 +213,55 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
 
-  bell: {
-    backgroundColor: "rgba(255,255,255,0.3)",
-    padding: 8,
-    borderRadius: 20,
-  },
-
-  searchBox: {
+  search: {
     backgroundColor: "#fff",
-    flexDirection: "row",
-    alignItems: "center",
     marginTop: 15,
     borderRadius: 20,
-    paddingHorizontal: 10,
-  },
-
-  input: {
-    flex: 1,
     padding: 10,
-  },
-
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    margin: 15,
   },
 
   card: {
     backgroundColor: "#fff",
+    margin: 15,
     padding: 15,
     borderRadius: 20,
-    marginLeft: 15,
-    width: 220,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
-  },
-
-  cardFull: {
-    backgroundColor: "#fff",
-    padding: 15,
-    borderRadius: 20,
-    marginHorizontal: 15,
-    marginBottom: 10,
     elevation: 2,
   },
 
-  cardTitle: {
+  title: {
     fontWeight: "bold",
     fontSize: 16,
   },
 
-  cardDesc: {
-    color: "#666",
-    marginVertical: 5,
+  category: {
+    color: "#888",
+    marginBottom: 5,
   },
 
-  row: {
+  text: {
+    marginTop: 5,
+  },
+
+  rowBetween: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginTop: 10,
     alignItems: "center",
+  },
+
+  actions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 10,
+    alignItems: "center",
+  },
+
+  like: {
+    color: "#FF6B81",
+  },
+
+  comment: {
+    color: "#555",
   },
 
   investBtn: {
@@ -276,7 +276,17 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  like: {
-    color: "#FF6B81",
+  trending: {
+    backgroundColor: "#FFE066",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    fontSize: 10,
+  },
+
+  empty: {
+    textAlign: "center",
+    marginTop: 30,
+    color: "#999",
   },
 });

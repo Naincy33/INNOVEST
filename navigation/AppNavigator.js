@@ -15,6 +15,8 @@ import PostScreen from "../screens/PostScreen";
 import PortfolioScreen from "../screens/PortfolioScreen";
 import LeaderboardScreen from "../screens/LeaderboardScreen";
 import ProfileScreen from "../screens/ProfileScreen";
+import MyIdeasScreen from "../screens/MyIdeasScreen";
+import CommentsScreen from "../screens/CommentsScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -46,6 +48,7 @@ function BottomTabs() {
       <Tab.Screen name="Portfolio" component={PortfolioScreen} />
       <Tab.Screen name="Leaderboard" component={LeaderboardScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="MyIdeas" component={MyIdeasScreen} />
     </Tab.Navigator>
   );
 }
@@ -65,6 +68,7 @@ export default function AppNavigator() {
 
         {/* Detail */}
         <Stack.Screen name="IdeaDetail" component={IdeaDetailScreen} />
+        <Stack.Screen name="Comments" component={CommentsScreen} />
 
       </Stack.Navigator>
     </NavigationContainer>

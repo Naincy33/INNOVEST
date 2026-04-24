@@ -5,6 +5,7 @@ import {
   TextInput,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
@@ -19,33 +20,13 @@ import {
 } from "firebase/firestore";
 import { db, auth } from "../firebase";
 
-import { generateIdea } from "../utils/ai";
-
 export default function PostScreen({ navigation }) {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
   const [problem, setProblem] = useState("");
   const [solution, setSolution] = useState("");
 
-  // 🔥 AI FUNCTION (FIXED)
-  const handleAI = async () => {
-    try {
-      const idea = await generateIdea();
-
-      // 👉 agar object return ho raha hai
-      if (typeof idea === "object") {
-        setTitle(idea.title || "");
-        setProblem(idea.problem || "");
-        setSolution(idea.solution || "");
-        setCategory("AI Generated");
-      } else {
-        alert(idea); // fallback
-      }
-    } catch (err) {
-      console.log(err);
-      alert("AI error 😢");
-    }
-  };
+  const [loadingSubmit, setLoadingSubmit] = useState(false);
 
   // 🔥 SUBMIT
   const handleSubmit = async () => {
@@ -55,7 +36,14 @@ export default function PostScreen({ navigation }) {
     }
 
     try {
+      setLoadingSubmit(true);
+
       const user = auth.currentUser;
+
+      if (!user) {
+        alert("User not logged in 😢");
+        return;
+      }
 
       // 🔥 SAVE IDEA
       await addDoc(collection(db, "ideas"), {
@@ -73,16 +61,29 @@ export default function PostScreen({ navigation }) {
       const userRef = doc(db, "users", user.uid);
       const snap = await getDoc(userRef);
 
-      const currentCoins = snap.data().coins;
+      let currentCoins = 0;
+      if (snap.exists()) {
+        currentCoins = snap.data().coins || 0;
+      }
 
       await updateDoc(userRef, {
         coins: currentCoins + 200,
       });
 
       alert("🎉 Idea Posted +200 coins earned!");
+
+      // 🔥 CLEAR FORM
+      setTitle("");
+      setCategory("");
+      setProblem("");
+      setSolution("");
+
       navigation.goBack();
     } catch (err) {
-      alert(err.message);
+      console.log(err);
+      alert("Error: " + err.message);
+    } finally {
+      setLoadingSubmit(false);
     }
   };
 
@@ -94,53 +95,61 @@ export default function PostScreen({ navigation }) {
         <Text style={styles.heading}>Post Your Idea 🚀</Text>
       </LinearGradient>
 
-      {/* AI BUTTON 🔥 */}
-      <TouchableOpacity style={styles.aiBtn} onPress={handleAI}>
-        <Text style={{ color: "#fff" }}>🤖 Generate Idea</Text>
-      </TouchableOpacity>
+      {/* 💡 SMALL INFO TEXT */}
+      <Text style={styles.info}>
+        ✨ Got a unique idea? Share it with the world 🚀
+      </Text>
 
       {/* FORM */}
       <View style={styles.card}>
-        <Text>Title</Text>
+        <Text style={styles.label}>Title</Text>
         <TextInput
           value={title}
           onChangeText={setTitle}
           style={styles.input}
+          placeholder="Enter idea title"
         />
       </View>
 
       <View style={styles.card}>
-        <Text>Category</Text>
+        <Text style={styles.label}>Category</Text>
         <TextInput
           value={category}
           onChangeText={setCategory}
           style={styles.input}
+          placeholder="Tech / AI / Business..."
         />
       </View>
 
       <View style={styles.card}>
-        <Text>Problem</Text>
+        <Text style={styles.label}>Problem</Text>
         <TextInput
           value={problem}
           onChangeText={setProblem}
           style={styles.input}
           multiline
+          placeholder="What problem are you solving?"
         />
       </View>
 
       <View style={styles.card}>
-        <Text>Solution</Text>
+        <Text style={styles.label}>Solution</Text>
         <TextInput
           value={solution}
           onChangeText={setSolution}
           style={styles.input}
           multiline
+          placeholder="Your solution"
         />
       </View>
 
       {/* SUBMIT */}
       <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-        <Text style={{ color: "#fff" }}>Submit Idea</Text>
+        {loadingSubmit ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.btnText}>Submit Idea</Text>
+        )}
       </TouchableOpacity>
     </ScrollView>
   );
@@ -148,7 +157,10 @@ export default function PostScreen({ navigation }) {
 
 // 🎨 STYLES
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFF5F7" },
+  container: {
+    flex: 1,
+    backgroundColor: "#FFF5F7",
+  },
 
   header: {
     padding: 30,
@@ -162,12 +174,10 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
 
-  aiBtn: {
-    backgroundColor: "#6C63FF",
-    margin: 15,
-    padding: 12,
-    borderRadius: 15,
-    alignItems: "center",
+  info: {
+    textAlign: "center",
+    marginTop: 15,
+    color: "#888",
   },
 
   card: {
@@ -175,6 +185,10 @@ const styles = StyleSheet.create({
     margin: 15,
     padding: 15,
     borderRadius: 15,
+  },
+
+  label: {
+    fontWeight: "600",
   },
 
   input: {
@@ -189,5 +203,10 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 20,
     alignItems: "center",
+  },
+
+  btnText: {
+    color: "#fff",
+    fontWeight: "bold",
   },
 });

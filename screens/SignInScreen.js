@@ -9,10 +9,11 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 
-// 🔥 FIREBASE AUTH
+// 🔥 AUTH
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
 } from "firebase/auth";
 
 // 🔥 FIRESTORE
@@ -22,7 +23,6 @@ import { auth, db } from "../firebase";
 
 export default function SignInScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -37,11 +37,9 @@ export default function SignInScreen({ navigation }) {
 
       const user = userCredential.user;
 
-      // 🔥 CHECK USER EXISTS IN DB
       const userRef = doc(db, "users", user.uid);
       const userSnap = await getDoc(userRef);
 
-      // 🔥 AGAR NAHI HAI → CREATE KAR
       if (!userSnap.exists()) {
         await setDoc(userRef, {
           name: "User",
@@ -67,7 +65,6 @@ export default function SignInScreen({ navigation }) {
 
       const user = userCredential.user;
 
-      // 🔥 NEW USER → AUTO CREATE
       await setDoc(doc(db, "users", user.uid), {
         name: "User",
         coins: 10000,
@@ -81,19 +78,26 @@ export default function SignInScreen({ navigation }) {
     }
   };
 
+  // 🔐 FORGOT PASSWORD
+  const handleForgotPassword = async () => {
+    if (!email) {
+      alert("Enter email first 😅");
+      return;
+    }
+
+    try {
+      await sendPasswordResetEmail(auth, email);
+      alert("Reset link sent 📩 Check your email");
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   return (
     <LinearGradient
       colors={["#FF8C94", "#FFB6C1", "#FFC4D0"]}
       style={styles.container}
     >
-      {/* BACK */}
-      <TouchableOpacity
-        style={styles.backBtn}
-        onPress={() => navigation.goBack()}
-      >
-        <Ionicons name="arrow-back" size={20} color="#fff" />
-      </TouchableOpacity>
-
       {/* HEADER */}
       <View style={styles.header}>
         <View style={styles.logoBox}>
@@ -109,9 +113,9 @@ export default function SignInScreen({ navigation }) {
       {/* CARD */}
       <View style={styles.card}>
         {/* EMAIL */}
-        <Text style={styles.label}>Email Address</Text>
+        <Text style={styles.label}>Email</Text>
         <TextInput
-          placeholder="your.email@example.com"
+          placeholder="Enter email"
           style={styles.input}
           onChangeText={setEmail}
           value={email}
@@ -121,12 +125,13 @@ export default function SignInScreen({ navigation }) {
         <Text style={styles.label}>Password</Text>
         <View style={styles.passwordBox}>
           <TextInput
-            placeholder="Enter your password"
+            placeholder="Enter password"
             secureTextEntry={!showPassword}
             style={{ flex: 1 }}
             onChangeText={setPassword}
             value={password}
           />
+
           <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
             <Ionicons
               name={showPassword ? "eye-off" : "eye"}
@@ -136,12 +141,17 @@ export default function SignInScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        {/* LOGIN BUTTON */}
+        {/* 🔐 FORGOT PASSWORD */}
+        <TouchableOpacity onPress={handleForgotPassword}>
+          <Text style={styles.forgot}>Forgot Password?</Text>
+        </TouchableOpacity>
+
+        {/* LOGIN */}
         <TouchableOpacity style={styles.loginBtn} onPress={handleLogin}>
           <Text style={styles.loginText}>Sign In</Text>
         </TouchableOpacity>
 
-        {/* SIGNUP BUTTON */}
+        {/* SIGNUP */}
         <TouchableOpacity style={styles.signupBtn} onPress={handleSignup}>
           <Text style={styles.signupText}>Create Account</Text>
         </TouchableOpacity>
@@ -151,24 +161,9 @@ export default function SignInScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: 60,
-  },
+  container: { flex: 1, paddingTop: 60 },
 
-  backBtn: {
-    position: "absolute",
-    top: 50,
-    left: 20,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    padding: 10,
-    borderRadius: 20,
-  },
-
-  header: {
-    alignItems: "center",
-    marginTop: 60,
-  },
+  header: { alignItems: "center", marginTop: 60 },
 
   logoBox: {
     backgroundColor: "#fff",
@@ -177,16 +172,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#fff",
-  },
-
-  subtitle: {
-    color: "#fff",
-    opacity: 0.9,
-  },
+  title: { fontSize: 24, fontWeight: "bold", color: "#fff" },
+  subtitle: { color: "#fff", opacity: 0.9 },
 
   card: {
     marginTop: 30,
@@ -196,11 +183,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
 
-  label: {
-    fontSize: 14,
-    marginBottom: 5,
-    marginTop: 10,
-  },
+  label: { marginTop: 10 },
 
   input: {
     backgroundColor: "#f3f3f3",
@@ -216,6 +199,12 @@ const styles = StyleSheet.create({
     borderRadius: 15,
   },
 
+  forgot: {
+    color: "#FF8C94",
+    marginTop: 10,
+    textAlign: "right",
+  },
+
   loginBtn: {
     backgroundColor: "#FF8C94",
     padding: 15,
@@ -224,10 +213,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
 
-  loginText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
+  loginText: { color: "#fff", fontWeight: "bold" },
 
   signupBtn: {
     borderColor: "#FF8C94",
