@@ -10,6 +10,7 @@ import SplashScreen from "../screens/SplashScreen";
 import SignInScreen from "../screens/SignInScreen";
 import HomeScreen from "../screens/HomeScreen";
 import IdeaDetailScreen from "../screens/IdeaDetailScreen";
+import QuizScreen from "../screens/QuizScreen";
 
 import PostScreen from "../screens/PostScreen";
 import PortfolioScreen from "../screens/PortfolioScreen";
@@ -49,6 +50,7 @@ function BottomTabs() {
       <Tab.Screen name="Leaderboard" component={LeaderboardScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
       <Tab.Screen name="MyIdeas" component={MyIdeasScreen} />
+      <Tab.Screen name="Quiz" component={QuizScreen} />
     </Tab.Navigator>
   );
 }
