@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   TextInput,
 } from "react-native";
+
 import { LinearGradient } from "expo-linear-gradient";
 import { useState, useEffect } from "react";
 
@@ -18,6 +19,7 @@ import {
   addDoc,
   increment,
 } from "firebase/firestore";
+
 import { db, auth } from "../firebase";
 
 export default function HomeScreen({ navigation }) {
@@ -25,15 +27,44 @@ export default function HomeScreen({ navigation }) {
   const [search, setSearch] = useState("");
   const [userCoins, setUserCoins] = useState(0);
 
+  // 🔥 FILTER
+  const [selectedCategory, setSelectedCategory] =
+    useState("All");
+
+  // 🔥 CATEGORIES
+  const categories = [
+    "All",
+    "AI",
+    "Tech",
+    "Healthcare",
+    "Education",
+    "Finance",
+  ];
+
   // 🔥 FETCH IDEAS
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "ideas"), (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setIdeas(data);
-    });
+    const unsub = onSnapshot(
+      collection(db, "ideas"),
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        // 🔥 TRENDING TOP
+        data.sort((a, b) => {
+          const scoreA =
+            (a.likes || 0) + (a.coins || 0);
+
+          const scoreB =
+            (b.likes || 0) + (b.coins || 0);
+
+          return scoreB - scoreA;
+        });
+
+        setIdeas(data);
+      }
+    );
 
     return () => unsub();
   }, []);
@@ -41,25 +72,64 @@ export default function HomeScreen({ navigation }) {
   // 🔥 FETCH USER COINS
   useEffect(() => {
     const user = auth.currentUser;
+
     if (!user) return;
 
-    const unsub = onSnapshot(doc(db, "users", user.uid), (snap) => {
-      if (snap.exists()) {
-        setUserCoins(snap.data().coins || 0);
+    const unsub = onSnapshot(
+      doc(db, "users", user.uid),
+      (snap) => {
+        if (snap.exists()) {
+          setUserCoins(
+            snap.data().coins || 0
+          );
+        }
       }
-    });
+    );
 
     return () => unsub();
   }, []);
 
-  // ❤️ LIKE
+  // ❤️ LIKE / UNLIKE
   const handleLike = async (item) => {
     try {
-      await updateDoc(doc(db, "ideas", item.id), {
-        likes: increment(1),
-      });
+      const user = auth.currentUser;
+
+      if (!user) {
+        alert("Login required 😢");
+        return;
+      }
+
+      const alreadyLiked =
+        item.likedBy?.includes(user.uid);
+
+      if (alreadyLiked) {
+        // 💔 UNLIKE
+        await updateDoc(
+          doc(db, "ideas", item.id),
+          {
+            likes: increment(-1),
+
+            likedBy: item.likedBy.filter(
+              (id) => id !== user.uid
+            ),
+          }
+        );
+      } else {
+        // ❤️ LIKE
+        await updateDoc(
+          doc(db, "ideas", item.id),
+          {
+            likes: increment(1),
+
+            likedBy: [
+              ...(item.likedBy || []),
+              user.uid,
+            ],
+          }
+        );
+      }
     } catch (err) {
-      console.log("LIKE ERROR:", err);
+      console.log(err);
       alert("Like failed 😢");
     }
   };
@@ -79,110 +149,256 @@ export default function HomeScreen({ navigation }) {
         return;
       }
 
-      // 🔥 update idea coins
-      await updateDoc(doc(db, "ideas", item.id), {
-        coins: increment(100),
-      });
+      // 🔥 IDEA COINS +
+      await updateDoc(
+        doc(db, "ideas", item.id),
+        {
+          coins: increment(100),
+        }
+      );
 
-      // 🔥 update user coins
-      await updateDoc(doc(db, "users", user.uid), {
-        coins: increment(-100),
-      });
+      // 🔥 USER COINS -
+      await updateDoc(
+        doc(db, "users", user.uid),
+        {
+          coins: increment(-100),
+        }
+      );
 
-      // 🔥 save investment
-      await addDoc(collection(db, "investments"), {
-        userId: user.uid,
-        ideaId: item.id,
-        ideaTitle: item.title,
-        amount: 100,
-        createdAt: Date.now(),
-      });
+      // 🔥 SAVE INVESTMENT
+      await addDoc(
+        collection(db, "investments"),
+        {
+          userId: user.uid,
+          ideaId: item.id,
+          ideaTitle: item.title,
+          amount: 100,
+          createdAt: Date.now(),
+        }
+      );
 
-      alert("Invested 🚀");
+      alert("🚀 Invested Successfully");
     } catch (err) {
-      console.log("INVEST ERROR:", err);
+      console.log(err);
       alert("Investment failed 😢");
     }
   };
 
-  // 🔍 SEARCH
+  // 🔍 SEARCH + FILTER
   const filteredIdeas = ideas.filter(
-    (item) =>
-      item.title?.toLowerCase().includes(search.toLowerCase()) ||
-      item.category?.toLowerCase().includes(search.toLowerCase())
+    (item) => {
+      const matchesSearch =
+        item.title
+          ?.toLowerCase()
+          .includes(
+            search.toLowerCase()
+          ) ||
+        item.category
+          ?.toLowerCase()
+          .includes(
+            search.toLowerCase()
+          );
+
+      // 🔥 SMART CATEGORY FILTER
+      const matchesCategory =
+        selectedCategory === "All" ||
+        item.category
+          ?.toLowerCase()
+          .includes(
+            selectedCategory.toLowerCase()
+          );
+
+      return (
+        matchesSearch &&
+        matchesCategory
+      );
+    }
   );
 
   return (
     <ScrollView style={styles.container}>
+      
       {/* HEADER */}
-      <LinearGradient colors={["#FF8C94", "#FFB6C1"]} style={styles.header}>
-        <Text style={styles.heading}>Discover Ideas 💡</Text>
-        <Text style={styles.coins}>💰 {userCoins}</Text>
+      <LinearGradient
+        colors={["#FF8C94", "#FFB6C1"]}
+        style={styles.header}
+      >
+        <Text style={styles.heading}>
+          Discover Ideas 💡
+        </Text>
 
+        <Text style={styles.coins}>
+          💰 {userCoins}
+        </Text>
+
+        {/* SEARCH */}
         <TextInput
           placeholder="Search ideas..."
           style={styles.search}
           value={search}
           onChangeText={setSearch}
         />
+
+        {/* FILTERS */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={
+            false
+          }
+          style={styles.filterRow}
+        >
+          {categories.map((cat) => (
+            <TouchableOpacity
+              key={cat}
+              style={[
+                styles.filterBtn,
+
+                selectedCategory === cat &&
+                  styles.activeFilter,
+              ]}
+              onPress={() =>
+                setSelectedCategory(cat)
+              }
+            >
+              <Text
+                style={[
+                  styles.filterText,
+
+                  selectedCategory ===
+                    cat &&
+                    styles.activeFilterText,
+                ]}
+              >
+                {cat}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </LinearGradient>
 
       {/* IDEAS */}
       {filteredIdeas.map((item) => {
         const isTrending =
-          (item.coins || 0) > 500 || (item.likes || 0) > 5;
+          (item.coins || 0) > 500 ||
+          (item.likes || 0) > 5;
 
         return (
-          <View key={item.id} style={styles.card}>
+          <View
+            key={item.id}
+            style={styles.card}
+          >
             {/* TITLE */}
             <View style={styles.rowBetween}>
-              <Text style={styles.title}>{item.title}</Text>
+              <Text style={styles.title}>
+                {item.title}
+              </Text>
 
               {isTrending && (
-                <Text style={styles.trending}>🔥 Trending</Text>
+                <Text style={styles.trending}>
+                  🔥 Trending
+                </Text>
               )}
             </View>
 
             {/* CATEGORY */}
-            <Text style={styles.category}>{item.category}</Text>
+            <Text style={styles.category}>
+              {item.category}
+            </Text>
+
+            {/* AI SCORE */}
+            <View style={styles.aiBox}>
+              <Text style={styles.aiText}>
+                📈{" "}
+                {item.predictionScore ||
+                  75}
+                % Success
+              </Text>
+
+              <Text style={styles.aiText}>
+                🔥{" "}
+                {item.marketDemand ||
+                  "Medium"}{" "}
+                Demand
+              </Text>
+            </View>
 
             {/* CONTENT */}
-            <Text style={styles.text}>🧠 {item.problem}</Text>
-            <Text style={styles.text}>💡 {item.solution}</Text>
+            <Text style={styles.text}>
+              🧠 {item.problem}
+            </Text>
+
+            <Text style={styles.text}>
+              💡 {item.solution}
+            </Text>
 
             {/* STATS */}
             <View style={styles.rowBetween}>
-              <Text>💰 {item.coins || 0}</Text>
-              <Text>❤️ {item.likes || 0}</Text>
+              <Text>
+                💰 {item.coins || 0}
+              </Text>
+
+              <Text>
+                ❤️ {item.likes || 0}
+              </Text>
             </View>
 
             {/* ACTIONS */}
             <View style={styles.actions}>
-              <TouchableOpacity onPress={() => handleLike(item)}>
-                <Text style={styles.like}>❤️ Like</Text>
-              </TouchableOpacity>
-
+              
+              {/* LIKE */}
               <TouchableOpacity
                 onPress={() =>
-                  navigation.navigate("Comments", { idea: item })
+                  handleLike(item)
                 }
               >
-                <Text style={styles.comment}>💬 Comments</Text>
+                <Text style={styles.like}>
+                  {item.likedBy?.includes(
+                    auth.currentUser?.uid
+                  )
+                    ? "💔 Unlike"
+                    : "❤️ Like"}
+                </Text>
               </TouchableOpacity>
 
+              {/* COMMENTS */}
+              <TouchableOpacity
+                onPress={() =>
+                  navigation.navigate(
+                    "Comments",
+                    {
+                      idea: item,
+                    }
+                  )
+                }
+              >
+                <Text
+                  style={styles.comment}
+                >
+                  💬 Comments
+                </Text>
+              </TouchableOpacity>
+
+              {/* INVEST */}
               <TouchableOpacity
                 style={styles.investBtn}
-                onPress={() => handleInvest(item)}
+                onPress={() =>
+                  handleInvest(item)
+                }
               >
-                <Text style={styles.btnText}>Invest</Text>
+                <Text style={styles.btnText}>
+                  Invest
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
         );
       })}
 
+      {/* EMPTY */}
       {filteredIdeas.length === 0 && (
-        <Text style={styles.empty}>No results 😢</Text>
+        <Text style={styles.empty}>
+          No ideas found 😢
+        </Text>
       )}
     </ScrollView>
   );
@@ -204,20 +420,46 @@ const styles = StyleSheet.create({
 
   heading: {
     color: "#fff",
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "bold",
   },
 
   coins: {
     color: "#fff",
     marginTop: 5,
+    fontSize: 15,
   },
 
   search: {
     backgroundColor: "#fff",
     marginTop: 15,
     borderRadius: 20,
-    padding: 10,
+    padding: 12,
+  },
+
+  filterRow: {
+    marginTop: 15,
+  },
+
+  filterBtn: {
+    backgroundColor: "#fff",
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 10,
+  },
+
+  activeFilter: {
+    backgroundColor: "#FF6B81",
+  },
+
+  filterText: {
+    color: "#555",
+  },
+
+  activeFilterText: {
+    color: "#fff",
+    fontWeight: "bold",
   },
 
   card: {
@@ -225,68 +467,92 @@ const styles = StyleSheet.create({
     margin: 15,
     padding: 15,
     borderRadius: 20,
-    elevation: 2,
+    elevation: 4,
   },
 
   title: {
     fontWeight: "bold",
-    fontSize: 16,
+    fontSize: 20,
+    flex: 1,
   },
 
   category: {
     color: "#888",
-    marginBottom: 5,
+    marginTop: 5,
+    fontSize: 14,
+  },
+
+  aiBox: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 12,
+    backgroundColor: "#FFF0F3",
+    padding: 10,
+    borderRadius: 12,
+  },
+
+  aiText: {
+    fontSize: 12,
+    color: "#444",
+    fontWeight: "600",
   },
 
   text: {
-    marginTop: 5,
+    marginTop: 10,
+    color: "#444",
+    lineHeight: 22,
+    fontSize: 14,
   },
 
   rowBetween: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 10,
     alignItems: "center",
+    marginTop: 10,
   },
 
   actions: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 10,
     alignItems: "center",
+    marginTop: 18,
   },
 
   like: {
     color: "#FF6B81",
+    fontWeight: "bold",
   },
 
   comment: {
-    color: "#555",
+    color: "#666",
+    fontWeight: "bold",
   },
 
   investBtn: {
     backgroundColor: "#FF8C94",
-    paddingHorizontal: 15,
-    paddingVertical: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
     borderRadius: 15,
   },
 
   btnText: {
     color: "#fff",
-    fontWeight: "600",
+    fontWeight: "bold",
   },
 
   trending: {
     backgroundColor: "#FFE066",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
     fontSize: 10,
+    fontWeight: "bold",
   },
 
   empty: {
     textAlign: "center",
-    marginTop: 30,
+    marginTop: 40,
     color: "#999",
+    fontSize: 16,
   },
 });

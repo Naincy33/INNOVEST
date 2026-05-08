@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
+
 import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
 
@@ -18,6 +19,7 @@ import {
   getDoc,
   updateDoc,
 } from "firebase/firestore";
+
 import { db, auth } from "../firebase";
 
 export default function PostScreen({ navigation }) {
@@ -26,11 +28,87 @@ export default function PostScreen({ navigation }) {
   const [problem, setProblem] = useState("");
   const [solution, setSolution] = useState("");
 
-  const [loadingSubmit, setLoadingSubmit] = useState(false);
+  const [loadingSubmit, setLoadingSubmit] =
+    useState(false);
 
-  // 🔥 SUBMIT
+  // 🔥 ML RESULT
+  const [prediction, setPrediction] =
+    useState(null);
+
+  // 🤖 SIMPLE ML LOGIC
+  const predictIdea = () => {
+    let score =
+      Math.floor(Math.random() * 40) + 60;
+
+    let demand = "Medium";
+    let risk = "Medium";
+
+    // 🔥 CATEGORY BASED
+    if (
+      category
+        .toLowerCase()
+        .includes("ai")
+    ) {
+      score += 12;
+      demand = "High";
+      risk = "Low";
+    }
+
+    if (
+      category
+        .toLowerCase()
+        .includes("tech")
+    ) {
+      score += 8;
+      demand = "High";
+    }
+
+    if (
+      category
+        .toLowerCase()
+        .includes("finance")
+    ) {
+      score += 5;
+      demand = "Medium";
+      risk = "High";
+    }
+
+    if (
+      category
+        .toLowerCase()
+        .includes("education")
+    ) {
+      score += 6;
+      demand = "Medium";
+    }
+
+    // 🔥 DETAILED IDEA BONUS
+    if (problem.length > 80) {
+      score += 5;
+    }
+
+    if (solution.length > 80) {
+      score += 5;
+    }
+
+    // 🔥 LIMIT
+    if (score > 98) score = 98;
+
+    return {
+      score,
+      demand,
+      risk,
+    };
+  };
+
+  // 🚀 SUBMIT
   const handleSubmit = async () => {
-    if (!title || !problem || !solution) {
+    if (
+      !title ||
+      !category ||
+      !problem ||
+      !solution
+    ) {
       alert("Fill all fields 😅");
       return;
     }
@@ -45,40 +123,67 @@ export default function PostScreen({ navigation }) {
         return;
       }
 
+      // 🔥 GENERATE ML RESULT
+      const result = predictIdea();
+
+      // 🔥 SHOW RESULT
+      setPrediction(result);
+
       // 🔥 SAVE IDEA
       await addDoc(collection(db, "ideas"), {
         title,
         category,
         problem,
         solution,
+
         userId: user.uid,
-        coins: 0,
+
         likes: 0,
+        coins: 0,
+
+        likedBy: [],
+
+        // 🔥 ML
+        predictionScore: result.score,
+        marketDemand: result.demand,
+        riskLevel: result.risk,
+
         createdAt: Date.now(),
       });
 
-      // 🔥 USER COINS +200
-      const userRef = doc(db, "users", user.uid);
+      // 🔥 USER COINS
+      const userRef = doc(
+        db,
+        "users",
+        user.uid
+      );
+
       const snap = await getDoc(userRef);
 
       let currentCoins = 0;
+
       if (snap.exists()) {
-        currentCoins = snap.data().coins || 0;
+        currentCoins =
+          snap.data().coins || 0;
       }
 
       await updateDoc(userRef, {
         coins: currentCoins + 200,
       });
 
-      alert("🎉 Idea Posted +200 coins earned!");
+      alert(
+        "🎉 Idea Posted Successfully +200 Coins"
+      );
 
-      // 🔥 CLEAR FORM
+      // 🔥 CLEAR
       setTitle("");
       setCategory("");
       setProblem("");
       setSolution("");
 
+      // 🔥 BACK
       navigation.goBack();
+
     } catch (err) {
       console.log(err);
       alert("Error: " + err.message);
@@ -91,18 +196,26 @@ export default function PostScreen({ navigation }) {
     <ScrollView style={styles.container}>
       
       {/* HEADER */}
-      <LinearGradient colors={["#FF8C94", "#FFB6C1"]} style={styles.header}>
-        <Text style={styles.heading}>Post Your Idea 🚀</Text>
+      <LinearGradient
+        colors={["#FF8C94", "#FFB6C1"]}
+        style={styles.header}
+      >
+        <Text style={styles.heading}>
+          Post Your Idea 🚀
+        </Text>
       </LinearGradient>
 
-      {/* 💡 SMALL INFO TEXT */}
+      {/* INFO */}
       <Text style={styles.info}>
-        ✨ Got a unique idea? Share it with the world 🚀
+        ✨ Share your startup vision
       </Text>
 
-      {/* FORM */}
+      {/* TITLE */}
       <View style={styles.card}>
-        <Text style={styles.label}>Title</Text>
+        <Text style={styles.label}>
+          Title
+        </Text>
+
         <TextInput
           value={title}
           onChangeText={setTitle}
@@ -111,46 +224,103 @@ export default function PostScreen({ navigation }) {
         />
       </View>
 
+      {/* CATEGORY */}
       <View style={styles.card}>
-        <Text style={styles.label}>Category</Text>
+        <Text style={styles.label}>
+          Category
+        </Text>
+
         <TextInput
           value={category}
           onChangeText={setCategory}
           style={styles.input}
-          placeholder="Tech / AI / Business..."
+          placeholder="AI / Tech / Education..."
         />
       </View>
 
+      {/* PROBLEM */}
       <View style={styles.card}>
-        <Text style={styles.label}>Problem</Text>
+        <Text style={styles.label}>
+          Problem
+        </Text>
+
         <TextInput
           value={problem}
           onChangeText={setProblem}
-          style={styles.input}
           multiline
+          style={[
+            styles.input,
+            { minHeight: 70 },
+          ]}
           placeholder="What problem are you solving?"
         />
       </View>
 
+      {/* SOLUTION */}
       <View style={styles.card}>
-        <Text style={styles.label}>Solution</Text>
+        <Text style={styles.label}>
+          Solution
+        </Text>
+
         <TextInput
           value={solution}
           onChangeText={setSolution}
-          style={styles.input}
           multiline
-          placeholder="Your solution"
+          style={[
+            styles.input,
+            { minHeight: 70 },
+          ]}
+          placeholder="Describe your solution"
         />
       </View>
 
-      {/* SUBMIT */}
-      <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+      {/* 🔥 AI RESULT */}
+      {prediction && (
+        <View style={styles.predictionCard}>
+          <Text
+            style={styles.predictionTitle}
+          >
+            📊 AI Market Analysis
+          </Text>
+
+          <Text
+            style={styles.predictionText}
+          >
+            🚀 Success Rate:{" "}
+            {prediction.score}%
+          </Text>
+
+          <Text
+            style={styles.predictionText}
+          >
+            🔥 Market Demand:{" "}
+            {prediction.demand}
+          </Text>
+
+          <Text
+            style={styles.predictionText}
+          >
+            ⚠️ Risk Level:{" "}
+            {prediction.risk}
+          </Text>
+        </View>
+      )}
+
+      {/* BUTTON */}
+      <TouchableOpacity
+        style={styles.button}
+        onPress={handleSubmit}
+      >
         {loadingSubmit ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.btnText}>Submit Idea</Text>
+          <Text style={styles.btnText}>
+            Submit Idea
+          </Text>
         )}
       </TouchableOpacity>
+
+      <View style={{ height: 40 }} />
     </ScrollView>
   );
 }
@@ -164,43 +334,72 @@ const styles = StyleSheet.create({
 
   header: {
     padding: 30,
+    paddingTop: 60,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
   },
 
   heading: {
     color: "#fff",
-    fontSize: 22,
+    fontSize: 25,
     fontWeight: "bold",
   },
 
   info: {
     textAlign: "center",
     marginTop: 15,
-    color: "#888",
+    color: "#777",
+    fontSize: 14,
   },
 
   card: {
     backgroundColor: "#fff",
-    margin: 15,
+    marginHorizontal: 15,
+    marginTop: 15,
     padding: 15,
-    borderRadius: 15,
+    borderRadius: 18,
+    elevation: 3,
   },
 
   label: {
-    fontWeight: "600",
+    fontWeight: "bold",
+    marginBottom: 10,
+    fontSize: 15,
   },
 
   input: {
     borderBottomWidth: 1,
-    marginTop: 10,
-    padding: 5,
+    borderColor: "#ddd",
+    paddingVertical: 8,
+    fontSize: 14,
+  },
+
+  predictionCard: {
+    backgroundColor: "#fff",
+    margin: 15,
+    padding: 18,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#FFD1D8",
+  },
+
+  predictionTitle: {
+    fontSize: 17,
+    fontWeight: "bold",
+    color: "#FF6B81",
+    marginBottom: 10,
+  },
+
+  predictionText: {
+    fontSize: 14,
+    marginTop: 7,
+    color: "#444",
   },
 
   button: {
     backgroundColor: "#FF8C94",
     margin: 20,
-    padding: 15,
+    padding: 16,
     borderRadius: 20,
     alignItems: "center",
   },
@@ -208,5 +407,6 @@ const styles = StyleSheet.create({
   btnText: {
     color: "#fff",
     fontWeight: "bold",
+    fontSize: 16,
   },
 });
