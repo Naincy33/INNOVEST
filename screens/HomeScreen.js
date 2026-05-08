@@ -28,8 +28,7 @@ export default function HomeScreen({ navigation }) {
   const [userCoins, setUserCoins] = useState(0);
 
   // 🔥 FILTER
-  const [selectedCategory, setSelectedCategory] =
-    useState("All");
+  const [selectedCategory, setSelectedCategory] = useState("All");
 
   // 🔥 CATEGORIES
   const categories = [
@@ -43,28 +42,23 @@ export default function HomeScreen({ navigation }) {
 
   // 🔥 FETCH IDEAS
   useEffect(() => {
-    const unsub = onSnapshot(
-      collection(db, "ideas"),
-      (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+    const unsub = onSnapshot(collection(db, "ideas"), (snapshot) => {
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
 
-        // 🔥 TRENDING TOP
-        data.sort((a, b) => {
-          const scoreA =
-            (a.likes || 0) + (a.coins || 0);
+      // 🔥 TRENDING TOP
+      data.sort((a, b) => {
+        const scoreA = (a.likes || 0) + (a.coins || 0);
 
-          const scoreB =
-            (b.likes || 0) + (b.coins || 0);
+        const scoreB = (b.likes || 0) + (b.coins || 0);
 
-          return scoreB - scoreA;
-        });
+        return scoreB - scoreA;
+      });
 
-        setIdeas(data);
-      }
-    );
+      setIdeas(data);
+    });
 
     return () => unsub();
   }, []);
@@ -75,16 +69,11 @@ export default function HomeScreen({ navigation }) {
 
     if (!user) return;
 
-    const unsub = onSnapshot(
-      doc(db, "users", user.uid),
-      (snap) => {
-        if (snap.exists()) {
-          setUserCoins(
-            snap.data().coins || 0
-          );
-        }
+    const unsub = onSnapshot(doc(db, "users", user.uid), (snap) => {
+      if (snap.exists()) {
+        setUserCoins(snap.data().coins || 0);
       }
-    );
+    });
 
     return () => unsub();
   }, []);
@@ -99,34 +88,22 @@ export default function HomeScreen({ navigation }) {
         return;
       }
 
-      const alreadyLiked =
-        item.likedBy?.includes(user.uid);
+      const alreadyLiked = item.likedBy?.includes(user.uid);
 
       if (alreadyLiked) {
         // 💔 UNLIKE
-        await updateDoc(
-          doc(db, "ideas", item.id),
-          {
-            likes: increment(-1),
+        await updateDoc(doc(db, "ideas", item.id), {
+          likes: increment(-1),
 
-            likedBy: item.likedBy.filter(
-              (id) => id !== user.uid
-            ),
-          }
-        );
+          likedBy: item.likedBy.filter((id) => id !== user.uid),
+        });
       } else {
         // ❤️ LIKE
-        await updateDoc(
-          doc(db, "ideas", item.id),
-          {
-            likes: increment(1),
+        await updateDoc(doc(db, "ideas", item.id), {
+          likes: increment(1),
 
-            likedBy: [
-              ...(item.likedBy || []),
-              user.uid,
-            ],
-          }
-        );
+          likedBy: [...(item.likedBy || []), user.uid],
+        });
       }
     } catch (err) {
       console.log(err);
@@ -150,32 +127,23 @@ export default function HomeScreen({ navigation }) {
       }
 
       // 🔥 IDEA COINS +
-      await updateDoc(
-        doc(db, "ideas", item.id),
-        {
-          coins: increment(100),
-        }
-      );
+      await updateDoc(doc(db, "ideas", item.id), {
+        coins: increment(100),
+      });
 
       // 🔥 USER COINS -
-      await updateDoc(
-        doc(db, "users", user.uid),
-        {
-          coins: increment(-100),
-        }
-      );
+      await updateDoc(doc(db, "users", user.uid), {
+        coins: increment(-100),
+      });
 
       // 🔥 SAVE INVESTMENT
-      await addDoc(
-        collection(db, "investments"),
-        {
-          userId: user.uid,
-          ideaId: item.id,
-          ideaTitle: item.title,
-          amount: 100,
-          createdAt: Date.now(),
-        }
-      );
+      await addDoc(collection(db, "investments"), {
+        userId: user.uid,
+        ideaId: item.id,
+        ideaTitle: item.title,
+        amount: 100,
+        createdAt: Date.now(),
+      });
 
       alert("🚀 Invested Successfully");
     } catch (err) {
@@ -185,51 +153,33 @@ export default function HomeScreen({ navigation }) {
   };
 
   // 🔍 SEARCH + FILTER
-  const filteredIdeas = ideas.filter(
-    (item) => {
-      const matchesSearch =
-        item.title
-          ?.toLowerCase()
-          .includes(
-            search.toLowerCase()
-          ) ||
-        item.category
-          ?.toLowerCase()
-          .includes(
-            search.toLowerCase()
-          );
+  const filteredIdeas = ideas.filter((item) => {
+    const matchesSearch =
+      item.title?.toLowerCase().includes(search.toLowerCase()) ||
+      item.category?.toLowerCase().includes(search.toLowerCase());
 
-      // 🔥 SMART CATEGORY FILTER
-      const matchesCategory =
-        selectedCategory === "All" ||
-        item.category
-          ?.toLowerCase()
-          .includes(
-            selectedCategory.toLowerCase()
-          );
+    // 🔥 SMART CATEGORY FILTER
+    const matchesCategory =
+      selectedCategory === "All" ||
+      item.category?.toLowerCase().includes(selectedCategory.toLowerCase());
 
-      return (
-        matchesSearch &&
-        matchesCategory
-      );
-    }
-  );
+    return matchesSearch && matchesCategory;
+  });
+
+  <TouchableOpacity
+    style={styles.quizBtn}
+    onPress={() => navigation.navigate("Quiz")}
+  >
+    <Text style={styles.quizText}>🎮 Play Finance Quiz</Text>
+  </TouchableOpacity>;
 
   return (
     <ScrollView style={styles.container}>
-      
       {/* HEADER */}
-      <LinearGradient
-        colors={["#FF8C94", "#FFB6C1"]}
-        style={styles.header}
-      >
-        <Text style={styles.heading}>
-          Discover Ideas 💡
-        </Text>
+      <LinearGradient colors={["#FF8C94", "#FFB6C1"]} style={styles.header}>
+        <Text style={styles.heading}>Discover Ideas 💡</Text>
 
-        <Text style={styles.coins}>
-          💰 {userCoins}
-        </Text>
+        <Text style={styles.coins}>💰 {userCoins}</Text>
 
         {/* SEARCH */}
         <TextInput
@@ -242,9 +192,7 @@ export default function HomeScreen({ navigation }) {
         {/* FILTERS */}
         <ScrollView
           horizontal
-          showsHorizontalScrollIndicator={
-            false
-          }
+          showsHorizontalScrollIndicator={false}
           style={styles.filterRow}
         >
           {categories.map((cat) => (
@@ -253,20 +201,15 @@ export default function HomeScreen({ navigation }) {
               style={[
                 styles.filterBtn,
 
-                selectedCategory === cat &&
-                  styles.activeFilter,
+                selectedCategory === cat && styles.activeFilter,
               ]}
-              onPress={() =>
-                setSelectedCategory(cat)
-              }
+              onPress={() => setSelectedCategory(cat)}
             >
               <Text
                 style={[
                   styles.filterText,
 
-                  selectedCategory ===
-                    cat &&
-                    styles.activeFilterText,
+                  selectedCategory === cat && styles.activeFilterText,
                 ]}
               >
                 {cat}
@@ -278,83 +221,49 @@ export default function HomeScreen({ navigation }) {
 
       {/* IDEAS */}
       {filteredIdeas.map((item) => {
-        const isTrending =
-          (item.coins || 0) > 500 ||
-          (item.likes || 0) > 5;
+        const isTrending = (item.coins || 0) > 500 || (item.likes || 0) > 5;
 
         return (
-          <View
-            key={item.id}
-            style={styles.card}
-          >
+          <View key={item.id} style={styles.card}>
             {/* TITLE */}
             <View style={styles.rowBetween}>
-              <Text style={styles.title}>
-                {item.title}
-              </Text>
+              <Text style={styles.title}>{item.title}</Text>
 
-              {isTrending && (
-                <Text style={styles.trending}>
-                  🔥 Trending
-                </Text>
-              )}
+              {isTrending && <Text style={styles.trending}>🔥 Trending</Text>}
             </View>
 
             {/* CATEGORY */}
-            <Text style={styles.category}>
-              {item.category}
-            </Text>
+            <Text style={styles.category}>{item.category}</Text>
 
             {/* AI SCORE */}
             <View style={styles.aiBox}>
               <Text style={styles.aiText}>
-                📈{" "}
-                {item.predictionScore ||
-                  75}
-                % Success
+                📈 {item.predictionScore || 75}% Success
               </Text>
 
               <Text style={styles.aiText}>
-                🔥{" "}
-                {item.marketDemand ||
-                  "Medium"}{" "}
-                Demand
+                🔥 {item.marketDemand || "Medium"} Demand
               </Text>
             </View>
 
             {/* CONTENT */}
-            <Text style={styles.text}>
-              🧠 {item.problem}
-            </Text>
+            <Text style={styles.text}>🧠 {item.problem}</Text>
 
-            <Text style={styles.text}>
-              💡 {item.solution}
-            </Text>
+            <Text style={styles.text}>💡 {item.solution}</Text>
 
             {/* STATS */}
             <View style={styles.rowBetween}>
-              <Text>
-                💰 {item.coins || 0}
-              </Text>
+              <Text>💰 {item.coins || 0}</Text>
 
-              <Text>
-                ❤️ {item.likes || 0}
-              </Text>
+              <Text>❤️ {item.likes || 0}</Text>
             </View>
 
             {/* ACTIONS */}
             <View style={styles.actions}>
-              
               {/* LIKE */}
-              <TouchableOpacity
-                onPress={() =>
-                  handleLike(item)
-                }
-              >
+              <TouchableOpacity onPress={() => handleLike(item)}>
                 <Text style={styles.like}>
-                  {item.likedBy?.includes(
-                    auth.currentUser?.uid
-                  )
+                  {item.likedBy?.includes(auth.currentUser?.uid)
                     ? "💔 Unlike"
                     : "❤️ Like"}
                 </Text>
@@ -363,31 +272,20 @@ export default function HomeScreen({ navigation }) {
               {/* COMMENTS */}
               <TouchableOpacity
                 onPress={() =>
-                  navigation.navigate(
-                    "Comments",
-                    {
-                      idea: item,
-                    }
-                  )
+                  navigation.navigate("Comments", {
+                    idea: item,
+                  })
                 }
               >
-                <Text
-                  style={styles.comment}
-                >
-                  💬 Comments
-                </Text>
+                <Text style={styles.comment}>💬 Comments</Text>
               </TouchableOpacity>
 
               {/* INVEST */}
               <TouchableOpacity
                 style={styles.investBtn}
-                onPress={() =>
-                  handleInvest(item)
-                }
+                onPress={() => handleInvest(item)}
               >
-                <Text style={styles.btnText}>
-                  Invest
-                </Text>
+                <Text style={styles.btnText}>Invest</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -396,9 +294,7 @@ export default function HomeScreen({ navigation }) {
 
       {/* EMPTY */}
       {filteredIdeas.length === 0 && (
-        <Text style={styles.empty}>
-          No ideas found 😢
-        </Text>
+        <Text style={styles.empty}>No ideas found 😢</Text>
       )}
     </ScrollView>
   );
@@ -554,5 +450,18 @@ const styles = StyleSheet.create({
     marginTop: 40,
     color: "#999",
     fontSize: 16,
+  },
+
+  quizBtn: {
+    backgroundColor: "#6C63FF",
+    marginTop: 15,
+    padding: 12,
+    borderRadius: 15,
+    alignItems: "center",
+  },
+
+  quizText: {
+    color: "#fff",
+    fontWeight: "bold",
   },
 });
