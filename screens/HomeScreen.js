@@ -110,8 +110,11 @@ export default function HomeScreen({ navigation }) {
         return;
       }
 
+      const likedUsers =
+        item.likedBy || [];
+
       const alreadyLiked =
-        item.likedBy?.includes(
+        likedUsers.includes(
           user.uid
         );
 
@@ -127,7 +130,7 @@ export default function HomeScreen({ navigation }) {
             likes: increment(-1),
 
             likedBy:
-              item.likedBy.filter(
+              likedUsers.filter(
                 (id) =>
                   id !== user.uid
               ),
@@ -145,8 +148,7 @@ export default function HomeScreen({ navigation }) {
             likes: increment(1),
 
             likedBy: [
-              ...(item.likedBy ||
-                []),
+              ...likedUsers,
               user.uid,
             ],
           }
@@ -237,66 +239,72 @@ export default function HomeScreen({ navigation }) {
 
   // 🤝 JOIN TEAM
   const handleJoinTeam =
-    async (item) => {
-      try {
-        const user =
-          auth.currentUser;
+  async (item) => {
+    try {
+      const user =
+        auth.currentUser;
 
-        if (!user) {
-          alert(
-            "Login required 😢"
-          );
-          return;
-        }
-
-        // ❌ OWN IDEA
-        if (
-          user.uid ===
-          item.userId
-        ) {
-          alert(
-            "This is your own idea 😭"
-          );
-          return;
-        }
-
-        await addDoc(
-          collection(
-            db,
-            "teamRequests"
-          ),
-          {
-            ideaId: item.id,
-            ownerId:
-              item.userId,
-
-            senderId: user.uid,
-            senderEmail:
-              user.email,
-
-            ideaTitle:
-              item.title,
-
-            status:
-              "pending",
-
-            createdAt:
-              Date.now(),
-          }
-        );
-
-        Alert.alert(
-          "🚀 Request Sent",
-          "Team request sent successfully"
-        );
-
-      } catch (err) {
-        console.log(err);
+      if (!user) {
         alert(
-          "Failed to send request 😢"
+          "Login required 😢"
         );
+        return;
       }
-    };
+
+      // ❌ OWN IDEA
+      if (
+        user.uid ===
+        item.userId
+      ) {
+        alert(
+          "This is your own idea 😭"
+        );
+        return;
+      }
+
+      await addDoc(
+        collection(
+          db,
+          "teamRequests"
+        ),
+        {
+          ideaId: item.id,
+
+          ownerId:
+            item.userId ||
+            "unknown",
+
+          senderId:
+            user.uid,
+
+          senderEmail:
+            user.email,
+
+          ideaTitle:
+            item.title,
+
+          status:
+            "pending",
+
+          createdAt:
+            Date.now(),
+        }
+      );
+
+      Alert.alert(
+        "🚀 Request Sent",
+        "Team request sent successfully"
+      );
+
+    } catch (err) {
+      console.log(err);
+
+      alert(
+        "Failed to send request 😢"
+      );
+    }
+  };
+  
 
   // 🔍 SEARCH + FILTER
   const filteredIdeas =
@@ -362,14 +370,9 @@ export default function HomeScreen({ navigation }) {
           onChangeText={setSearch}
         />
 
-        {/* QUIZ BUTTON */}
+        {/* QUIZ */}
         <TouchableOpacity
           style={styles.quizBtn}
-          onPress={() =>
-            navigation.navigate(
-              "Quiz"
-            )
-          }
         >
           <Text
             style={styles.quizText}
@@ -535,8 +538,18 @@ export default function HomeScreen({ navigation }) {
                   styles.actions
                 }
               >
-                {/* LIKE */}
+                {/* ❤️ LIKE */}
                 <TouchableOpacity
+                  style={[
+                    styles.likeBtn,
+
+                    item.likedBy?.includes(
+                      auth
+                        .currentUser
+                        ?.uid
+                    ) &&
+                      styles.activeLikeBtn,
+                  ]}
                   onPress={() =>
                     handleLike(
                       item
@@ -545,7 +558,7 @@ export default function HomeScreen({ navigation }) {
                 >
                   <Text
                     style={
-                      styles.like
+                      styles.actionText
                     }
                   >
                     {item.likedBy?.includes(
@@ -558,8 +571,11 @@ export default function HomeScreen({ navigation }) {
                   </Text>
                 </TouchableOpacity>
 
-                {/* COMMENTS */}
+                {/* 💬 COMMENTS */}
                 <TouchableOpacity
+                  style={
+                    styles.commentBtn
+                  }
                   onPress={() =>
                     navigation.navigate(
                       "Comments",
@@ -571,7 +587,7 @@ export default function HomeScreen({ navigation }) {
                 >
                   <Text
                     style={
-                      styles.comment
+                      styles.actionText
                     }
                   >
                     💬 Comments
@@ -585,7 +601,7 @@ export default function HomeScreen({ navigation }) {
                   styles.bottomActions
                 }
               >
-                {/* INVEST */}
+                {/* 💰 INVEST */}
                 <TouchableOpacity
                   style={
                     styles.investBtn
@@ -605,7 +621,7 @@ export default function HomeScreen({ navigation }) {
                   </Text>
                 </TouchableOpacity>
 
-                {/* JOIN TEAM */}
+                {/* 🤝 JOIN TEAM */}
                 <TouchableOpacity
                   style={
                     styles.teamBtn
@@ -786,14 +802,34 @@ const styles = StyleSheet.create({
     marginTop: 15,
   },
 
-  like: {
-    color: "#FF6B81",
-    fontWeight: "bold",
+  likeBtn: {
+    backgroundColor:
+      "#FFE5EA",
+    padding: 10,
+    borderRadius: 14,
+    flex: 1,
+    alignItems: "center",
+    marginRight: 8,
   },
 
-  comment: {
-    color: "#666",
+  activeLikeBtn: {
+    backgroundColor:
+      "#FF8C94",
+  },
+
+  commentBtn: {
+    backgroundColor:
+      "#F3F3F3",
+    padding: 10,
+    borderRadius: 14,
+    flex: 1,
+    alignItems: "center",
+    marginLeft: 8,
+  },
+
+  actionText: {
     fontWeight: "bold",
+    color: "#444",
   },
 
   investBtn: {
