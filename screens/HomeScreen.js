@@ -5,7 +5,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
 } from "react-native";
 
 import { LinearGradient } from "expo-linear-gradient";
@@ -29,11 +28,9 @@ export default function HomeScreen({ navigation }) {
   const [userCoins, setUserCoins] =
     useState(0);
 
-  // 🔥 FILTER
   const [selectedCategory, setSelectedCategory] =
     useState("All");
 
-  // 🔥 CATEGORIES
   const categories = [
     "All",
     "AI",
@@ -41,6 +38,7 @@ export default function HomeScreen({ navigation }) {
     "Healthcare",
     "Education",
     "Finance",
+    "Gaming",
   ];
 
   // 🔥 FETCH IDEAS
@@ -54,19 +52,6 @@ export default function HomeScreen({ navigation }) {
             ...doc.data(),
           })
         );
-
-        // 🔥 TRENDING TOP
-        data.sort((a, b) => {
-          const scoreA =
-            (a.likes || 0) +
-            (a.coins || 0);
-
-          const scoreB =
-            (b.likes || 0) +
-            (b.coins || 0);
-
-          return scoreB - scoreA;
-        });
 
         setIdeas(data);
       }
@@ -95,7 +80,7 @@ export default function HomeScreen({ navigation }) {
     return () => unsub();
   }, []);
 
-  // ❤️ LIKE / UNLIKE
+  // ❤️ SUPPORT
   const handleLike = async (
     item
   ) => {
@@ -119,7 +104,7 @@ export default function HomeScreen({ navigation }) {
         );
 
       if (alreadyLiked) {
-        // 💔 UNLIKE
+        // REMOVE SUPPORT
         await updateDoc(
           doc(
             db,
@@ -137,7 +122,38 @@ export default function HomeScreen({ navigation }) {
           }
         );
       } else {
-        // ❤️ LIKE
+        // REMOVE WEAK IF EXIST
+        const weakUsers =
+          item.weakBy || [];
+
+        if (
+          weakUsers.includes(
+            user.uid
+          )
+        ) {
+          await updateDoc(
+            doc(
+              db,
+              "ideas",
+              item.id
+            ),
+            {
+              weakCount:
+                increment(-1),
+
+              weakBy:
+                weakUsers.filter(
+                  (
+                    id
+                  ) =>
+                    id !==
+                    user.uid
+                ),
+            }
+          );
+        }
+
+        // ADD SUPPORT
         await updateDoc(
           doc(
             db,
@@ -157,9 +173,110 @@ export default function HomeScreen({ navigation }) {
 
     } catch (err) {
       console.log(err);
-      alert("Like failed 😢");
     }
   };
+
+  // 📉 WEAK PITCH
+  const handleWeakPitch =
+    async (item) => {
+      try {
+        const user =
+          auth.currentUser;
+
+        if (!user) {
+          alert(
+            "Login required 😢"
+          );
+          return;
+        }
+
+        const weakUsers =
+          item.weakBy || [];
+
+        const alreadyWeak =
+          weakUsers.includes(
+            user.uid
+          );
+
+        if (alreadyWeak) {
+          // REMOVE WEAK
+          await updateDoc(
+            doc(
+              db,
+              "ideas",
+              item.id
+            ),
+            {
+              weakCount:
+                increment(-1),
+
+              weakBy:
+                weakUsers.filter(
+                  (
+                    id
+                  ) =>
+                    id !==
+                    user.uid
+                ),
+            }
+          );
+        } else {
+          // REMOVE SUPPORT
+          const likedUsers =
+            item.likedBy || [];
+
+          if (
+            likedUsers.includes(
+              user.uid
+            )
+          ) {
+            await updateDoc(
+              doc(
+                db,
+                "ideas",
+                item.id
+              ),
+              {
+                likes:
+                  increment(
+                    -1
+                  ),
+
+                likedBy:
+                  likedUsers.filter(
+                    (
+                      id
+                    ) =>
+                      id !==
+                      user.uid
+                  ),
+              }
+            );
+          }
+
+          // ADD WEAK
+          await updateDoc(
+            doc(
+              db,
+              "ideas",
+              item.id
+            ),
+            {
+              weakCount:
+                increment(1),
+
+              weakBy: [
+                ...weakUsers,
+                user.uid,
+              ],
+            }
+          );
+        }
+
+      } catch (err) {
+        console.log(err);
+      }
+    };
 
   // 💰 INVEST
   const handleInvest =
@@ -182,7 +299,7 @@ export default function HomeScreen({ navigation }) {
           return;
         }
 
-        // 🔥 IDEA COINS +
+        // IDEA COINS +
         await updateDoc(
           doc(
             db,
@@ -195,7 +312,7 @@ export default function HomeScreen({ navigation }) {
           }
         );
 
-        // 🔥 USER COINS -
+        // USER COINS -
         await updateDoc(
           doc(
             db,
@@ -208,7 +325,7 @@ export default function HomeScreen({ navigation }) {
           }
         );
 
-        // 🔥 SAVE INVESTMENT
+        // SAVE INVESTMENT
         await addDoc(
           collection(
             db,
@@ -231,82 +348,10 @@ export default function HomeScreen({ navigation }) {
 
       } catch (err) {
         console.log(err);
-        alert(
-          "Investment failed 😢"
-        );
       }
     };
 
-  // 🤝 JOIN TEAM
-  const handleJoinTeam =
-  async (item) => {
-    try {
-      const user =
-        auth.currentUser;
-
-      if (!user) {
-        alert(
-          "Login required 😢"
-        );
-        return;
-      }
-
-      // ❌ OWN IDEA
-      if (
-        user.uid ===
-        item.userId
-      ) {
-        alert(
-          "This is your own idea 😭"
-        );
-        return;
-      }
-
-      await addDoc(
-        collection(
-          db,
-          "teamRequests"
-        ),
-        {
-          ideaId: item.id,
-
-          ownerId:
-            item.userId ||
-            "unknown",
-
-          senderId:
-            user.uid,
-
-          senderEmail:
-            user.email,
-
-          ideaTitle:
-            item.title,
-
-          status:
-            "pending",
-
-          createdAt:
-            Date.now(),
-        }
-      );
-
-      Alert.alert(
-        "🚀 Request Sent",
-        "Team request sent successfully"
-      );
-
-    } catch (err) {
-      console.log(err);
-
-      alert(
-        "Failed to send request 😢"
-      );
-    }
-  };
-  
-
-  // 🔍 SEARCH + FILTER
+  // 🔍 FILTER
   const filteredIdeas =
     ideas.filter((item) => {
       const matchesSearch =
@@ -314,14 +359,8 @@ export default function HomeScreen({ navigation }) {
           ?.toLowerCase()
           .includes(
             search.toLowerCase()
-          ) ||
-        item.category
-          ?.toLowerCase()
-          .includes(
-            search.toLowerCase()
           );
 
-      // 🔥 SMART FILTER
       const matchesCategory =
         selectedCategory ===
           "All" ||
@@ -373,6 +412,11 @@ export default function HomeScreen({ navigation }) {
         {/* QUIZ */}
         <TouchableOpacity
           style={styles.quizBtn}
+          onPress={() =>
+            navigation.navigate(
+              "Quiz"
+            )
+          }
         >
           <Text
             style={styles.quizText}
@@ -426,11 +470,15 @@ export default function HomeScreen({ navigation }) {
       {/* IDEAS */}
       {filteredIdeas.map(
         (item) => {
-          const isTrending =
-            (item.coins || 0) >
-              500 ||
-            (item.likes || 0) >
-              5;
+          const isSupported =
+            item.likedBy?.includes(
+              auth.currentUser?.uid
+            );
+
+          const isWeak =
+            item.weakBy?.includes(
+              auth.currentUser?.uid
+            );
 
           return (
             <View
@@ -438,29 +486,11 @@ export default function HomeScreen({ navigation }) {
               style={styles.card}
             >
               {/* TITLE */}
-              <View
-                style={
-                  styles.rowBetween
-                }
+              <Text
+                style={styles.title}
               >
-                <Text
-                  style={
-                    styles.title
-                  }
-                >
-                  {item.title}
-                </Text>
-
-                {isTrending && (
-                  <Text
-                    style={
-                      styles.trending
-                    }
-                  >
-                    🔥 Trending
-                  </Text>
-                )}
-              </View>
+                {item.title}
+              </Text>
 
               {/* CATEGORY */}
               <Text
@@ -471,7 +501,7 @@ export default function HomeScreen({ navigation }) {
                 {item.category}
               </Text>
 
-              {/* AI SCORE */}
+              {/* AI BOX */}
               <View
                 style={
                   styles.aiBox
@@ -484,7 +514,7 @@ export default function HomeScreen({ navigation }) {
                 >
                   📈{" "}
                   {item.predictionScore ||
-                    75}
+                    84}
                   % Success
                 </Text>
 
@@ -495,18 +525,19 @@ export default function HomeScreen({ navigation }) {
                 >
                   🔥{" "}
                   {item.marketDemand ||
-                    "Medium"}{" "}
+                    "High"}{" "}
                   Demand
                 </Text>
               </View>
 
-              {/* CONTENT */}
+              {/* PROBLEM */}
               <Text
                 style={styles.text}
               >
                 🧠 {item.problem}
               </Text>
 
+              {/* SOLUTION */}
               <Text
                 style={styles.text}
               >
@@ -525,29 +556,39 @@ export default function HomeScreen({ navigation }) {
                     0}
                 </Text>
 
-                <Text>
-                  ❤️{" "}
-                  {item.likes ||
-                    0}
-                </Text>
+                <View
+                  style={{
+                    flexDirection:
+                      "row",
+                    gap: 10,
+                  }}
+                >
+                  <Text>
+                    ❤️{" "}
+                    {item.likes ||
+                      0}
+                  </Text>
+
+                  <Text>
+                    📉{" "}
+                    {item.weakCount ||
+                      0}
+                  </Text>
+                </View>
               </View>
 
-              {/* ACTIONS */}
+              {/* REACTIONS */}
               <View
                 style={
                   styles.actions
                 }
               >
-                {/* ❤️ LIKE */}
+                {/* SUPPORT */}
                 <TouchableOpacity
                   style={[
                     styles.likeBtn,
 
-                    item.likedBy?.includes(
-                      auth
-                        .currentUser
-                        ?.uid
-                    ) &&
+                    isSupported &&
                       styles.activeLikeBtn,
                   ]}
                   onPress={() =>
@@ -558,50 +599,89 @@ export default function HomeScreen({ navigation }) {
                 >
                   <Text
                     style={
-                      styles.actionText
+                      styles.heart
                     }
                   >
-                    {item.likedBy?.includes(
-                      auth
-                        .currentUser
-                        ?.uid
-                    )
-                      ? "💔 Unlike"
-                      : "❤️ Like"}
+                    {isSupported
+                      ? "❤️"
+                      : "🤍"}
                   </Text>
+
+                  <View>
+                    <Text
+                      style={
+                        styles.actionText
+                      }
+                    >
+                      {isSupported
+                        ? "Supported"
+                        : "Support"}
+                    </Text>
+
+                    <Text
+                      style={
+                        styles.countText
+                      }
+                    >
+                      ❤️{" "}
+                      {item.likes ||
+                        0}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
 
-                {/* 💬 COMMENTS */}
+                {/* WEAK */}
                 <TouchableOpacity
-                  style={
-                    styles.commentBtn
-                  }
+                  style={[
+                    styles.commentBtn,
+
+                    isWeak &&
+                      styles.activeWeakBtn,
+                  ]}
                   onPress={() =>
-                    navigation.navigate(
-                      "Comments",
-                      {
-                        idea: item,
-                      }
+                    handleWeakPitch(
+                      item
                     )
                   }
                 >
                   <Text
                     style={
-                      styles.actionText
+                      styles.weakEmoji
                     }
                   >
-                    💬 Comments
+                    {isWeak
+                      ? "📉"
+                      : "📊"}
                   </Text>
+
+                  <View>
+                    <Text
+                      style={
+                        styles.actionText
+                      }
+                    >
+                      Weak Pitch
+                    </Text>
+
+                    <Text
+                      style={
+                        styles.countText
+                      }
+                    >
+                      📉{" "}
+                      {item.weakCount ||
+                        0}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               </View>
 
-              {/* BOTTOM ACTIONS */}
+              {/* BUTTONS */}
               <View
                 style={
                   styles.bottomActions
                 }
               >
-                {/* 💰 INVEST */}
                 <TouchableOpacity
                   style={
                     styles.investBtn
@@ -621,15 +701,9 @@ export default function HomeScreen({ navigation }) {
                   </Text>
                 </TouchableOpacity>
 
-                {/* 🤝 JOIN TEAM */}
                 <TouchableOpacity
                   style={
                     styles.teamBtn
-                  }
-                  onPress={() =>
-                    handleJoinTeam(
-                      item
-                    )
                   }
                 >
                   <Text
@@ -646,14 +720,6 @@ export default function HomeScreen({ navigation }) {
         }
       )}
 
-      {/* EMPTY */}
-      {filteredIdeas.length ===
-        0 && (
-        <Text style={styles.empty}>
-          No ideas found 😢
-        </Text>
-      )}
-
       <View
         style={{ height: 40 }}
       />
@@ -661,7 +727,6 @@ export default function HomeScreen({ navigation }) {
   );
 }
 
-// 🎨 STYLES
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -678,7 +743,7 @@ const styles = StyleSheet.create({
 
   heading: {
     color: "#fff",
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: "bold",
   },
 
@@ -697,37 +762,38 @@ const styles = StyleSheet.create({
 
   quizBtn: {
     backgroundColor:
-      "#6C63FF",
+      "#352D90",
     marginTop: 15,
-    padding: 12,
-    borderRadius: 15,
+    padding: 15,
+    borderRadius: 18,
     alignItems: "center",
   },
 
   quizText: {
     color: "#fff",
     fontWeight: "bold",
+    fontSize: 16,
   },
 
   filterRow: {
-    marginTop: 15,
+    marginTop: 20,
   },
 
   filterBtn: {
     backgroundColor: "#fff",
-    paddingHorizontal: 15,
-    paddingVertical: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
     borderRadius: 20,
     marginRight: 10,
   },
 
   activeFilter: {
     backgroundColor:
-      "#FF6B81",
+      "#FF4D8D",
   },
 
   filterText: {
-    color: "#555",
+    color: "#444",
   },
 
   activeFilterText: {
@@ -738,45 +804,42 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: "#fff",
     margin: 15,
-    padding: 15,
-    borderRadius: 22,
-    elevation: 4,
+    padding: 18,
+    borderRadius: 25,
+    elevation: 5,
   },
 
   title: {
+    fontSize: 22,
     fontWeight: "bold",
-    fontSize: 20,
-    flex: 1,
   },
 
   category: {
     color: "#888",
     marginTop: 5,
-    fontSize: 14,
   },
 
   aiBox: {
     flexDirection: "row",
     justifyContent:
       "space-between",
-    marginTop: 12,
     backgroundColor:
       "#FFF0F3",
-    padding: 10,
-    borderRadius: 12,
+    padding: 12,
+    borderRadius: 15,
+    marginTop: 15,
   },
 
   aiText: {
-    fontSize: 12,
-    color: "#444",
     fontWeight: "600",
+    color: "#444",
   },
 
   text: {
-    marginTop: 10,
+    marginTop: 15,
+    fontSize: 15,
     color: "#444",
-    lineHeight: 22,
-    fontSize: 14,
+    lineHeight: 24,
   },
 
   rowBetween: {
@@ -784,47 +847,60 @@ const styles = StyleSheet.create({
     justifyContent:
       "space-between",
     alignItems: "center",
-    marginTop: 10,
+    marginTop: 15,
   },
 
   actions: {
     flexDirection: "row",
     justifyContent:
       "space-between",
-    alignItems: "center",
-    marginTop: 18,
-  },
-
-  bottomActions: {
-    flexDirection: "row",
-    justifyContent:
-      "space-between",
-    marginTop: 15,
+    marginTop: 20,
   },
 
   likeBtn: {
-    backgroundColor:
-      "#FFE5EA",
-    padding: 10,
-    borderRadius: 14,
     flex: 1,
+    backgroundColor:
+      "#FFE7EC",
+    padding: 12,
+    borderRadius: 16,
+    flexDirection: "row",
     alignItems: "center",
     marginRight: 8,
   },
 
   activeLikeBtn: {
     backgroundColor:
-      "#FF8C94",
+      "#FFD4DF",
+    borderWidth: 1,
+    borderColor: "#FF4D8D",
   },
 
   commentBtn: {
-    backgroundColor:
-      "#F3F3F3",
-    padding: 10,
-    borderRadius: 14,
     flex: 1,
+    backgroundColor:
+      "#FFF0E8",
+    padding: 12,
+    borderRadius: 16,
+    flexDirection: "row",
     alignItems: "center",
     marginLeft: 8,
+  },
+
+  activeWeakBtn: {
+    backgroundColor:
+      "#FFD6D6",
+    borderWidth: 1,
+    borderColor: "#FF6B6B",
+  },
+
+  heart: {
+    fontSize: 28,
+    marginRight: 10,
+  },
+
+  weakEmoji: {
+    fontSize: 24,
+    marginRight: 10,
   },
 
   actionText: {
@@ -832,22 +908,33 @@ const styles = StyleSheet.create({
     color: "#444",
   },
 
+  countText: {
+    fontSize: 11,
+    color: "#666",
+    marginTop: 2,
+  },
+
+  bottomActions: {
+    flexDirection: "row",
+    marginTop: 20,
+  },
+
   investBtn: {
-    backgroundColor:
-      "#FF8C94",
     flex: 1,
-    padding: 12,
-    borderRadius: 15,
+    backgroundColor:
+      "#FF6B81",
+    padding: 14,
+    borderRadius: 18,
     alignItems: "center",
     marginRight: 8,
   },
 
   teamBtn: {
-    backgroundColor:
-      "#6C63FF",
     flex: 1,
-    padding: 12,
-    borderRadius: 15,
+    backgroundColor:
+      "#352D90",
+    padding: 14,
+    borderRadius: 18,
     alignItems: "center",
     marginLeft: 8,
   },
@@ -855,22 +942,5 @@ const styles = StyleSheet.create({
   btnText: {
     color: "#fff",
     fontWeight: "bold",
-  },
-
-  trending: {
-    backgroundColor:
-      "#FFE066",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-    fontSize: 10,
-    fontWeight: "bold",
-  },
-
-  empty: {
-    textAlign: "center",
-    marginTop: 40,
-    color: "#999",
-    fontSize: 16,
   },
 });
