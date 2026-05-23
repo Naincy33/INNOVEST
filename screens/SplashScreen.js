@@ -2,196 +2,307 @@ import {
   View,
   Text,
   StyleSheet,
-  Image,
   TouchableOpacity,
+  StatusBar,
   Dimensions,
 } from "react-native";
+
 import { LinearGradient } from "expo-linear-gradient";
+
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
   withTiming,
 } from "react-native-reanimated";
+
 import { useEffect } from "react";
+
 import { useNavigation } from "@react-navigation/native";
 
-const { width } = Dimensions.get("window");
+const { width } =
+  Dimensions.get("window");
 
 export default function SplashScreen() {
-  const navigation = useNavigation();
 
-  const scale = useSharedValue(1);
+  const navigation =
+    useNavigation();
+
+  // 🔥 ANIMATION
+  const scale =
+    useSharedValue(1);
 
   useEffect(() => {
-    scale.value = withRepeat(withTiming(1.15, { duration: 1200 }), -1, true);
+
+    scale.value =
+      withRepeat(
+        withTiming(1.04, {
+          duration: 1400,
+        }),
+        -1,
+        true
+      );
+
   }, []);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
+  const animatedStyle =
+    useAnimatedStyle(() => ({
+      transform: [
+        {
+          scale:
+            scale.value,
+        },
+      ],
+    }));
 
   return (
+
     <LinearGradient
-      colors={["#F28C8C", "#F8D7DA"]}
+      colors={[
+        "#F7F2EA",
+        "#F3ECE2",
+      ]}
       style={styles.container}
     >
-      {/* TOP DESIGN WAVES */}
-      <View style={styles.wave1} />
-      <View style={styles.wave2} />
 
-      {/* BULB */}
-      <Animated.Image
-        source={require("../assets/images/bulb.png")}
-        style={[styles.bulb, animatedStyle]}
-        resizeMode="contain"
+      <StatusBar
+        barStyle="dark-content"
       />
 
-      {/* TEXT */}
-      <View style={styles.textBox}>
-        <Text style={styles.title}>Welcome to</Text>
+      {/* 🔥 REDDISH GLOW */}
+      <View style={styles.topGlow} />
 
-        <Text style={styles.brand}>Innovest</Text>
+      {/* 🔥 LOGO */}
+      <Animated.View
+        style={[
+          styles.logoContainer,
+          animatedStyle,
+        ]}
+      >
+
+        <Animated.Image
+          source={require("../assets/images/bulb.png")}
+          resizeMode="contain"
+          style={styles.logo}
+        />
+
+      </Animated.View>
+
+      {/* 🔥 TEXT */}
+      <View style={styles.textBox}>
+
+        <Text style={styles.title}>
+          Innovest
+        </Text>
 
         <Text style={styles.subtitle}>
-          Turn your ideas into investments 💰
+          Invest in Ideas
         </Text>
+
       </View>
 
-      {/* BOTTOM CARD */}
-      <View style={styles.bottomCard}>
+      {/* 🔥 BUTTON AREA */}
+      <View style={styles.bottomArea}>
+
         <TouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate("SignIn")}
+          onPress={() =>
+            navigation.navigate(
+              "SignIn"
+            )
+          }
         >
-          <Text style={styles.buttonText}>Continue →</Text>
+          <Text
+            style={
+              styles.buttonText
+            }
+          >
+            Continue →
+          </Text>
         </TouchableOpacity>
 
-        {/* DOTS */}
+        {/* 🔥 DOTS */}
         <View style={styles.dots}>
-          <View style={styles.activeDot} />
-          <View style={styles.dot} />
+
+          <View
+            style={
+              styles.activeDot
+            }
+          />
+
+          <View
+            style={styles.dot}
+          />
+
         </View>
+
       </View>
+
     </LinearGradient>
   );
 }
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingTop: 80,
-  },
 
-  /* WAVES (FIGMA STYLE BACKGROUND) */
-  wave1: {
-    position: "absolute",
-    top: 0,
-    width: "120%",
-    height: 200,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    borderBottomLeftRadius: 150,
-    borderBottomRightRadius: 150,
-  },
+const styles =
+  StyleSheet.create({
 
-  wave2: {
-    position: "absolute",
-    top: 80,
-    width: "140%",
-    height: 200,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderBottomLeftRadius: 200,
-    borderBottomRightRadius: 200,
-  },
+    // 🔥 MAIN
+    container: {
+      flex: 1,
 
-  /* BULB (BIG + CENTERED 🔥) */
-  bulb: {
-    width: width * 0.5,   // BIG SIZE
-    height: width * 0.5,
-    marginTop: 40,
-  },
+      backgroundColor:
+        "#F7F2EA",
 
-  textBox: {
-    alignItems: "center",
-    paddingHorizontal: 30,
-  },
+      alignItems: "center",
 
-  title: {
-    fontSize: 26,
-    color: "#fff",
-    fontWeight: "600",
-  },
+      justifyContent:
+        "space-between",
 
-  brand: {
-    fontSize: 48,
-    fontWeight: "bold",
-    color: "#FFE5B4",
+      paddingTop: 120,
 
-    textShadowColor: "rgba(255, 223, 120, 0.9)",
-    textShadowOffset: { width: 0, height: 6 },
-    textShadowRadius: 12,
-  },
+      paddingBottom: 45,
+    },
 
-  subtitle: {
-    textAlign: "center",
-    color: "#fff",
-    fontSize: 16,
-    marginTop: 10,
-  },
+    // 🔥 BIG TOP GLOW
+    topGlow: {
+      position: "absolute",
 
-  /* BOTTOM CARD */
-  bottomCard: {
-    width: "100%",
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 40,
-    borderTopRightRadius: 40,
-    padding: 25,
-    alignItems: "center",
+      top: -220,
 
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 10,
-  },
+      width: 760,
+      height: 760,
 
-  button: {
-    backgroundColor: "#F28C8C",
-    width: "90%",
-    padding: 18,
-    borderRadius: 30,
-    alignItems: "center",
+      borderRadius: 380,
 
-    shadowColor: "#F28C8C",
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 8,
-  },
+      backgroundColor:
+        "rgba(255,107,107,0.10)",
+    },
 
-  buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
+    // 🔥 WHITE CIRCLE
+    logoContainer: {
+      width: width * 0.36,
 
-  dots: {
-    flexDirection: "row",
-    marginTop: 15,
-  },
+      height: width * 0.36,
 
-  activeDot: {
-    width: 8,
-    height: 8,
-    backgroundColor: "#F28C8C",
-    borderRadius: 4,
-    margin: 5,
-  },
+      borderRadius: 999,
 
-  dot: {
-    width: 8,
-    height: 8,
-    backgroundColor: "#ccc",
-    borderRadius: 4,
-    margin: 5,
-  },
-});
+      backgroundColor:
+        "#FFFFFF",
+
+      alignItems: "center",
+
+      justifyContent:
+        "center",
+
+      shadowColor: "#000",
+
+      shadowOpacity: 0.10,
+
+      shadowRadius: 16,
+
+      elevation: 6,
+    },
+
+    // 🔥 BULB BIGGER
+    logo: {
+      width: width * 0.28,
+
+      height: width * 0.28,
+    },
+
+    // 🔥 TEXT
+    textBox: {
+      alignItems: "center",
+
+      marginTop: -160,
+    },
+
+    title: {
+      fontSize: 52,
+
+      fontWeight: "bold",
+
+      color: "#0D0D0D",
+
+      letterSpacing: -1.5,
+    },
+
+    subtitle: {
+      marginTop: 10,
+
+      color: "#6B6B6B",
+
+      fontSize: 18,
+
+      fontWeight: "500",
+    },
+
+    // 🔥 BOTTOM
+    bottomArea: {
+      width: "100%",
+
+      alignItems: "center",
+    },
+
+    // 🔥 BUTTON
+    button: {
+      width: "82%",
+
+      backgroundColor:
+        "#050505",
+
+      paddingVertical: 19,
+
+      borderRadius: 999,
+
+      alignItems: "center",
+
+      shadowColor: "#000",
+
+      shadowOpacity: 0.16,
+
+      shadowRadius: 14,
+
+      elevation: 8,
+    },
+
+    buttonText: {
+      color: "#fff",
+
+      fontWeight: "bold",
+
+      fontSize: 17,
+
+      letterSpacing: 0.3,
+    },
+
+    // 🔥 DOTS
+    dots: {
+      flexDirection: "row",
+
+      marginTop: 22,
+    },
+
+    activeDot: {
+      width: 10,
+      height: 10,
+
+      borderRadius: 5,
+
+      backgroundColor:
+        "#FF6B6B",
+
+      marginHorizontal: 5,
+    },
+
+    dot: {
+      width: 10,
+      height: 10,
+
+      borderRadius: 5,
+
+      backgroundColor:
+        "#D8D1C7",
+
+      marginHorizontal: 5,
+    },
+  });

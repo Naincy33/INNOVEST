@@ -6,10 +6,12 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { useEffect, useState } from "react";
 
-// 🔥 FIREBASE
+import {
+  useEffect,
+  useState,
+} from "react";
+
 import {
   collection,
   query,
@@ -18,160 +20,407 @@ import {
   deleteDoc,
   doc,
 } from "firebase/firestore";
-import { db, auth } from "../firebase";
+
+import {
+  db,
+  auth,
+} from "../firebase";
 
 export default function MyIdeasScreen() {
-  const [ideas, setIdeas] = useState([]);
 
-  // 🔥 FETCH ONLY MY IDEAS
+  const [ideas, setIdeas] =
+    useState([]);
+
+  // 🔥 FETCH MY IDEAS
   useEffect(() => {
-    const user = auth.currentUser;
+
+    const user =
+      auth.currentUser;
+
     if (!user) return;
 
-    const q = query(collection(db, "ideas"), where("userId", "==", user.uid));
+    const q = query(
+      collection(db, "ideas"),
+      where(
+        "userId",
+        "==",
+        user.uid
+      )
+    );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+    const unsubscribe =
+      onSnapshot(
+        q,
+        (snapshot) => {
 
-      setIdeas(data);
-    });
+          const data =
+            snapshot.docs.map(
+              (doc) => ({
+                id: doc.id,
+                ...doc.data(),
+              })
+            );
 
-    return () => unsubscribe();
+          setIdeas(data);
+        }
+      );
+
+    return () =>
+      unsubscribe();
+
   }, []);
 
-  // 🔥 DELETE
-  const handleDelete = (item) => {
-    Alert.alert("Delete Idea", "Are you sure?", [
-      { text: "Cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          await deleteDoc(doc(db, "ideas", item.id));
-        },
-      },
-    ]);
-  };
+  // 🔥 DELETE IDEA
+  const handleDelete =
+    (item) => {
+
+      Alert.alert(
+        "Delete Idea",
+        "Are you sure you want to delete this idea?",
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+
+          {
+            text: "Delete",
+            style:
+              "destructive",
+
+            onPress:
+              async () => {
+
+                await deleteDoc(
+                  doc(
+                    db,
+                    "ideas",
+                    item.id
+                  )
+                );
+              },
+          },
+        ]
+      );
+    };
 
   return (
-    <ScrollView style={styles.container}>
+
+    <ScrollView
+      style={styles.container}
+      showsVerticalScrollIndicator={
+        false
+      }
+    >
+
       {/* HEADER */}
-      <LinearGradient colors={["#FF8C94", "#FFB6C1"]} style={styles.header}>
-        <Text style={styles.title}>My Ideas 💡</Text>
-      </LinearGradient>
+      <View style={styles.header}>
 
-      {/* LIST */}
+        <Text style={styles.heading}>
+          My Ideas
+        </Text>
+
+        <Text style={styles.subheading}>
+          Manage your posted startup ideas 🚀
+        </Text>
+
+      </View>
+
+      {/* IDEAS */}
       {ideas.map((item) => (
-        <View key={item.id} style={styles.card}>
-          <Text style={styles.title2}>{item.title}</Text>
-          <Text style={styles.category}>{item.category}</Text>
 
-          <Text style={styles.desc}>🧠 {item.problem}</Text>
-          <Text style={styles.desc}>💡 {item.solution}</Text>
+        <View
+          key={item.id}
+          style={styles.card}
+        >
 
-          <View style={styles.row}>
-            <Text>💰 {item.coins || 0}</Text>
-            <Text>❤️ {item.likes || 0}</Text>
+          {/* TOP */}
+          <View style={styles.topRow}>
+
+            <View>
+
+              <Text style={styles.title}>
+                {item.title}
+              </Text>
+
+              <Text style={styles.category}>
+                {item.category}
+              </Text>
+
+            </View>
+
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>
+                Active
+              </Text>
+            </View>
+
           </View>
-          <View style={styles.footerBox}>
-            <Text style={styles.footerTitle}>💡 Your Ideas</Text>
-            <Text style={styles.footerSub}>
-              Manage, edit or delete your posted ideas
+
+          {/* CONTENT */}
+          <Text style={styles.label}>
+            Problem
+          </Text>
+
+          <Text style={styles.desc}>
+            {item.problem}
+          </Text>
+
+          <Text style={styles.label}>
+            Solution
+          </Text>
+
+          <Text style={styles.desc}>
+            {item.solution}
+          </Text>
+
+          {/* STATS */}
+          <View style={styles.statsRow}>
+
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>
+                💰 {item.coins || 0}
+              </Text>
+
+              <Text style={styles.statLabel}>
+                Coins
+              </Text>
+            </View>
+
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>
+                ❤️ {item.likes || 0}
+              </Text>
+
+              <Text style={styles.statLabel}>
+                Likes
+              </Text>
+            </View>
+
+          </View>
+
+          {/* DELETE */}
+          <TouchableOpacity
+            style={styles.deleteBtn}
+            onPress={() =>
+              handleDelete(item)
+            }
+          >
+
+            <Text style={styles.deleteText}>
+              Delete Idea
             </Text>
-          </View>
 
-          <TouchableOpacity onPress={() => handleDelete(item)}>
-            <Text style={styles.delete}>🗑 Delete</Text>
           </TouchableOpacity>
+
         </View>
       ))}
 
       {/* EMPTY */}
       {ideas.length === 0 && (
-        <Text style={styles.empty}>You haven’t posted anything yet 😢</Text>
+
+        <View style={styles.emptyBox}>
+
+          <Text style={styles.emptyTitle}>
+            No Ideas Yet
+          </Text>
+
+          <Text style={styles.emptySub}>
+            Start posting innovative startup ideas 🚀
+          </Text>
+
+        </View>
       )}
+
+      <View style={{ height: 50 }} />
+
     </ScrollView>
   );
 }
 
-// 🎨 STYLES
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FFF5F7",
-  },
+const styles =
+  StyleSheet.create({
 
-  header: {
-    padding: 20,
-    paddingTop: 60,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-  },
+    container: {
+      flex: 1,
+      backgroundColor:
+        "#F5F0E6",
+    },
 
-  title: {
-    color: "#fff",
-    fontSize: 24,
-    fontWeight: "bold",
-  },
+    header: {
+      paddingTop: 70,
+      paddingHorizontal: 24,
+      marginBottom: 20,
+    },
 
-  card: {
-    backgroundColor: "#fff",
-    margin: 10,
-    padding: 15,
-    borderRadius: 20,
-  },
+    heading: {
+      fontSize: 38,
+      fontWeight: "bold",
+      color: "#111",
+    },
 
-  title2: {
-    fontWeight: "bold",
-    fontSize: 16,
-  },
+    subheading: {
+      marginTop: 8,
+      color: "#777",
+      fontSize: 16,
+    },
 
-  category: {
-    color: "#888",
-    marginBottom: 5,
-  },
+    card: {
+      backgroundColor:
+        "#fff",
 
-  desc: {
-    marginTop: 5,
-  },
+      marginHorizontal: 20,
 
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 10,
-  },
+      marginBottom: 18,
 
-  delete: {
-    color: "red",
-    marginTop: 10,
-    textAlign: "right",
-  },
+      borderRadius: 28,
 
-  empty: {
-    textAlign: "center",
-    marginTop: 30,
-    color: "#999",
-  },
+      padding: 22,
 
-  footerBox: {
-    margin: 20,
-    padding: 15,
-    backgroundColor: "#fff",
-    borderRadius: 15,
-    alignItems: "center",
-  },
+      shadowColor: "#000",
 
-  footerTitle: {
-    fontWeight: "bold",
-    fontSize: 16,
-  },
+      shadowOpacity: 0.05,
 
-  footerSub: {
-    color: "#888",
-    fontSize: 12,
-    marginTop: 5,
-  },
-});
+      shadowRadius: 10,
+
+      elevation: 4,
+    },
+
+    topRow: {
+      flexDirection: "row",
+
+      justifyContent:
+        "space-between",
+
+      alignItems: "center",
+
+      marginBottom: 18,
+    },
+
+    title: {
+      fontSize: 24,
+      fontWeight: "bold",
+      color: "#111",
+    },
+
+    category: {
+      color: "#888",
+      marginTop: 5,
+      fontSize: 14,
+    },
+
+    badge: {
+      backgroundColor:
+        "#F4EFE6",
+
+      paddingHorizontal: 14,
+
+      paddingVertical: 8,
+
+      borderRadius: 999,
+    },
+
+    badgeText: {
+      color: "#111",
+      fontWeight: "600",
+      fontSize: 12,
+    },
+
+    label: {
+      marginTop: 10,
+      marginBottom: 5,
+
+      fontWeight: "700",
+
+      color: "#111",
+
+      fontSize: 15,
+    },
+
+    desc: {
+      color: "#666",
+      lineHeight: 24,
+      fontSize: 15,
+    },
+
+    statsRow: {
+      flexDirection: "row",
+
+      justifyContent:
+        "space-between",
+
+      marginTop: 24,
+    },
+
+    statBox: {
+      backgroundColor:
+        "#F8F5EE",
+
+      width: "48%",
+
+      borderRadius: 20,
+
+      padding: 18,
+
+      alignItems: "center",
+    },
+
+    statValue: {
+      fontSize: 20,
+      fontWeight: "bold",
+      color: "#111",
+    },
+
+    statLabel: {
+      marginTop: 6,
+      color: "#888",
+      fontWeight: "600",
+    },
+
+    deleteBtn: {
+      marginTop: 24,
+
+      borderWidth: 1.5,
+
+      borderColor:
+        "#FF6B6B",
+
+      borderRadius: 999,
+
+      paddingVertical: 16,
+
+      alignItems: "center",
+    },
+
+    deleteText: {
+      color: "#FF6B6B",
+      fontWeight: "bold",
+      fontSize: 16,
+    },
+
+    emptyBox: {
+      backgroundColor:
+        "#fff",
+
+      margin: 20,
+
+      borderRadius: 28,
+
+      padding: 40,
+
+      alignItems: "center",
+    },
+
+    emptyTitle: {
+      fontSize: 24,
+      fontWeight: "bold",
+      color: "#111",
+    },
+
+    emptySub: {
+      marginTop: 10,
+      color: "#777",
+      textAlign: "center",
+      lineHeight: 22,
+    },
+  });

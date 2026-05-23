@@ -5,10 +5,9 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
+  StatusBar,
 } from "react-native";
 
-import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 
 import {
@@ -24,15 +23,25 @@ import {
   getDoc,
 } from "firebase/firestore";
 
-import { auth, db } from "../firebase";
+import {
+  Ionicons,
+} from "@expo/vector-icons";
+
+import {
+  auth,
+  db,
+} from "../firebase";
 
 export default function SignInScreen({
   navigation,
 }) {
+
   const [showPassword, setShowPassword] =
     useState(false);
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail] =
+    useState("");
+
   const [password, setPassword] =
     useState("");
 
@@ -40,31 +49,41 @@ export default function SignInScreen({
     useState(false);
 
   // 🔥 CLEAN EMAIL/PASSWORD
-  const normalizedEmail = email
-    .trim()
-    .toLowerCase();
+  const normalizedEmail =
+    email.trim().toLowerCase();
 
   const normalizedPassword =
     password.trim();
 
   // ✅ VALIDATION
   const validateAuthForm = () => {
+
     if (
       !normalizedEmail ||
       !normalizedPassword
     ) {
+
       alert(
         "Please enter email and password 😅"
       );
+
       return false;
     }
 
-    // 🔥 VALID EMAIL
+    // ✅ PROFESSIONAL EMAIL VALIDATION
+    const emailRegex =
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
     if (
-      !normalizedEmail.includes("@") ||
-      !normalizedEmail.includes(".")
+      !emailRegex.test(
+        normalizedEmail
+      )
     ) {
-      alert("Enter valid email 😢");
+
+      alert(
+        "Enter valid email 😢"
+      );
+
       return false;
     }
 
@@ -72,9 +91,11 @@ export default function SignInScreen({
     if (
       normalizedPassword.length < 6
     ) {
+
       alert(
         "Password must be at least 6 characters 😅"
       );
+
       return false;
     }
 
@@ -84,31 +105,35 @@ export default function SignInScreen({
   // 🔥 CREATE USER PROFILE
   const ensureUserProfile =
     async (user) => {
+
       const userRef = doc(
         db,
         "users",
         user.uid
       );
 
-      const userSnap = await getDoc(
-        userRef
-      );
+      const userSnap =
+        await getDoc(userRef);
 
       if (!userSnap.exists()) {
+
         await setDoc(userRef, {
           email: normalizedEmail,
           name: "User",
           coins: 10000,
           createdAt: Date.now(),
         });
+
       }
     };
 
   // 🔐 LOGIN
   const handleLogin = async () => {
+
     if (!validateAuthForm()) return;
 
     try {
+
       setIsSubmitting(true);
 
       const userCredential =
@@ -121,56 +146,87 @@ export default function SignInScreen({
       const user =
         userCredential.user;
 
-      // 🔥 CHECK EMAIL VERIFIED
+      // 🔥 REFRESH USER
+      await user.reload();
+
+      // ❌ EMAIL NOT VERIFIED
       if (!user.emailVerified) {
+
         alert(
           "Please verify your email first 📩"
         );
+
+        await auth.signOut();
+
         return;
       }
 
+      // ✅ CREATE PROFILE IF MISSING
       await ensureUserProfile(user);
 
+      // ✅ LOGIN SUCCESS
       navigation.replace(
         "HomeTabs"
       );
 
     } catch (error) {
+
       console.log(error);
 
       if (
         error.code ===
         "auth/invalid-email"
       ) {
+
         alert("Invalid email 😢");
+
       } else if (
         error.code ===
         "auth/user-not-found"
       ) {
+
         alert(
           "Account not found 😢"
         );
+
       } else if (
         error.code ===
         "auth/wrong-password"
       ) {
+
         alert(
           "Wrong password 😢"
         );
+
+      } else if (
+        error.code ===
+        "auth/invalid-credential"
+      ) {
+
+        alert(
+          "Invalid email or password 😢"
+        );
+
       } else {
+
         alert(error.message);
+
       }
 
     } finally {
+
       setIsSubmitting(false);
+
     }
   };
 
   // 🆕 SIGNUP
   const handleSignup = async () => {
+
     if (!validateAuthForm()) return;
 
     try {
+
       setIsSubmitting(true);
 
       const userCredential =
@@ -183,53 +239,80 @@ export default function SignInScreen({
       const user =
         userCredential.user;
 
-      // 🔥 SEND VERIFICATION
+      // 🔥 SEND EMAIL VERIFICATION
       await sendEmailVerification(
         user
       );
 
-      // 🔥 CREATE USER PROFILE
+      // 🔥 CREATE PROFILE
       await ensureUserProfile(user);
+
+      // 🔥 LOGOUT USER
+      await auth.signOut();
 
       alert(
         "📩 Verification email sent!\nPlease verify before login."
       );
 
     } catch (error) {
+
       console.log(error);
 
       if (
         error.code ===
         "auth/email-already-in-use"
       ) {
+
         alert(
           "Email already exists 😢"
         );
+
       } else if (
         error.code ===
         "auth/invalid-email"
       ) {
-        alert("Invalid email 😢");
+
+        alert(
+          "Invalid email 😢"
+        );
+
+      } else if (
+        error.code ===
+        "auth/weak-password"
+      ) {
+
+        alert(
+          "Weak password 😢"
+        );
+
       } else {
+
         alert(error.message);
+
       }
 
     } finally {
+
       setIsSubmitting(false);
+
     }
   };
 
   // 🔥 FORGOT PASSWORD
   const handleForgotPassword =
     async () => {
+
       if (!normalizedEmail) {
+
         alert(
           "Enter your email first 😅"
         );
+
         return;
       }
 
       try {
+
         await sendPasswordResetEmail(
           auth,
           normalizedEmail
@@ -240,106 +323,132 @@ export default function SignInScreen({
         );
 
       } catch (err) {
+
         console.log(err);
+
         alert(err.message);
+
       }
     };
 
   return (
-    <LinearGradient
-      colors={[
-        "#FF8C94",
-        "#FFB6C1",
-        "#FFC4D0",
-      ]}
-      style={styles.container}
-    >
-      {/* HEADER */}
-      <View style={styles.header}>
-        <View style={styles.logoBox}>
-          <Ionicons
-            name="bulb"
-            size={30}
-            color="#FFD700"
-          />
+
+    <View style={styles.container}>
+
+      <StatusBar
+        barStyle="dark-content"
+      />
+
+      {/* 🔥 CONTENT */}
+      <View style={styles.content}>
+
+        {/* 🔥 HEADER */}
+        <View style={styles.header}>
+
+          <Text style={styles.heading}>
+            Sign In
+          </Text>
+
+          <Text style={styles.subHeading}>
+            Welcome back to Innovest
+          </Text>
+
         </View>
 
-        <Text style={styles.title}>
-          Welcome to Innovest
-        </Text>
+        {/* 🔥 EMAIL */}
+        <View style={styles.inputGroup}>
 
-        <Text style={styles.subtitle}>
-          Invest in startup ideas 🚀
-        </Text>
-      </View>
+          <Text style={styles.label}>
+            Email
+          </Text>
 
-      {/* CARD */}
-      <View style={styles.card}>
-        
-        {/* EMAIL */}
-        <Text style={styles.label}>
-          Email
-        </Text>
-
-        <TextInput
-          placeholder="Enter email"
-          style={styles.input}
-          onChangeText={setEmail}
-          value={email}
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="email-address"
-        />
-
-        {/* PASSWORD */}
-        <Text style={styles.label}>
-          Password
-        </Text>
-
-        <View style={styles.passwordBox}>
           <TextInput
-            placeholder="Enter password"
-            secureTextEntry={
-              !showPassword
-            }
-            style={{ flex: 1 }}
-            onChangeText={setPassword}
-            value={password}
+            placeholder="name@example.com"
+            placeholderTextColor="#999"
+            style={styles.input}
+            value={email}
+            onChangeText={setEmail}
             autoCapitalize="none"
             autoCorrect={false}
+            keyboardType="email-address"
           />
 
-          <TouchableOpacity
-            onPress={() =>
-              setShowPassword(
-                !showPassword
-              )
-            }
-          >
-            <Ionicons
-              name={
-                showPassword
-                  ? "eye-off"
-                  : "eye"
-              }
-              size={20}
-              color="#888"
-            />
-          </TouchableOpacity>
         </View>
 
-        {/* FORGOT */}
-        <TouchableOpacity
-          onPress={
-            handleForgotPassword
-          }
-        >
-          <Text style={styles.forgot}>
-            Forgot Password?
-          </Text>
-        </TouchableOpacity>
+        {/* 🔥 PASSWORD */}
+        <View style={styles.inputGroup}>
 
-        {/* LOGIN */}
+          <Text style={styles.label}>
+            Password
+          </Text>
+
+          <View style={styles.passwordBox}>
+
+            <TextInput
+              placeholder="••••••••"
+              placeholderTextColor="#999"
+              secureTextEntry={
+                !showPassword
+              }
+              style={styles.passwordInput}
+              value={password}
+              onChangeText={setPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+
+            <TouchableOpacity
+              onPress={() =>
+                setShowPassword(
+                  !showPassword
+                )
+              }
+            >
+
+              <Ionicons
+                name={
+                  showPassword
+                    ? "eye-off"
+                    : "eye"
+                }
+                size={22}
+                color="#888"
+              />
+
+            </TouchableOpacity>
+
+          </View>
+
+        </View>
+
+        {/* 🔥 REMEMBER + FORGOT */}
+        <View style={styles.row}>
+
+          <View style={styles.rememberBox}>
+
+            <View style={styles.checkbox} />
+
+            <Text style={styles.rememberText}>
+              Remember me
+            </Text>
+
+          </View>
+
+          <TouchableOpacity
+            onPress={
+              handleForgotPassword
+            }
+          >
+
+            <Text style={styles.forgot}>
+              Forgot password?
+            </Text>
+
+          </TouchableOpacity>
+
+        </View>
+
+        {/* 🔥 LOGIN BUTTON */}
         <TouchableOpacity
           style={[
             styles.loginBtn,
@@ -350,139 +459,250 @@ export default function SignInScreen({
           onPress={handleLogin}
           disabled={isSubmitting}
         >
+
           {isSubmitting ? (
-            <ActivityIndicator color="#fff" />
+
+            <ActivityIndicator
+              color="#fff"
+            />
+
           ) : (
-            <Text
-              style={styles.loginText}
-            >
+
+            <Text style={styles.loginText}>
               Sign In
             </Text>
+
           )}
+
         </TouchableOpacity>
 
-        {/* SIGNUP */}
+        {/* 🔥 SIGNUP */}
         <TouchableOpacity
-          style={[
-            styles.signupBtn,
-
-            isSubmitting &&
-              styles.disabledBtn,
-          ]}
           onPress={handleSignup}
           disabled={isSubmitting}
         >
-          {isSubmitting ? (
-            <ActivityIndicator color="#FF8C94" />
-          ) : (
-            <Text
-              style={
-                styles.signupText
-              }
-            >
-              Create Account
+
+          <Text style={styles.signupText}>
+            {"Don't have an account? "}
+
+            <Text style={styles.signupHighlight}>
+              Sign up
             </Text>
-          )}
+
+          </Text>
+
         </TouchableOpacity>
+
       </View>
-    </LinearGradient>
+
+    </View>
   );
 }
 
-// 🎨 STYLES
 const styles = StyleSheet.create({
+
   container: {
     flex: 1,
-    paddingTop: 60,
+    backgroundColor: "#F7F2EA",
   },
 
+  // 🔥 MAIN CONTENT
+  content: {
+    flex: 1,
+
+    justifyContent: "center",
+
+    paddingHorizontal: 28,
+  },
+
+  // 🔥 HEADER
   header: {
-    alignItems: "center",
-    marginTop: 60,
+    marginBottom: 45,
   },
 
-  logoBox: {
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 20,
-    marginBottom: 12,
-  },
+  heading: {
+    fontSize: 52,
 
-  title: {
-    fontSize: 26,
     fontWeight: "bold",
-    color: "#fff",
+
+    color: "#0D0D0D",
+
+    letterSpacing: -2,
   },
 
-  subtitle: {
-    color: "#fff",
-    opacity: 0.9,
-    marginTop: 5,
+  subHeading: {
+    marginTop: 10,
+
+    color: "#6B6B6B",
+
+    fontSize: 18,
+
+    fontWeight: "500",
   },
 
-  card: {
-    marginTop: 35,
-    backgroundColor: "#fff",
-    marginHorizontal: 20,
-    borderRadius: 25,
-    padding: 22,
-    elevation: 5,
+  // 🔥 INPUT GROUP
+  inputGroup: {
+    marginBottom: 24,
   },
 
   label: {
-    marginTop: 12,
-    marginBottom: 5,
-    fontWeight: "600",
+    fontSize: 16,
+
+    fontWeight: "700",
+
+    color: "#333",
+
+    marginBottom: 10,
   },
 
+  // 🔥 INPUT
   input: {
-    backgroundColor: "#f5f5f5",
-    padding: 14,
-    borderRadius: 15,
+    backgroundColor: "#FFFFFF",
+
+    borderRadius: 20,
+
+    paddingHorizontal: 22,
+
+    paddingVertical: 18,
+
+    fontSize: 16,
+
+    color: "#111",
+
+    shadowColor: "#000",
+
+    shadowOpacity: 0.05,
+
+    shadowRadius: 10,
+
+    elevation: 2,
   },
 
+  // 🔥 PASSWORD BOX
   passwordBox: {
+    backgroundColor: "#FFFFFF",
+
+    borderRadius: 20,
+
+    paddingHorizontal: 22,
+
+    paddingVertical: 5,
+
     flexDirection: "row",
+
     alignItems: "center",
-    backgroundColor: "#f5f5f5",
-    paddingHorizontal: 14,
-    borderRadius: 15,
+
+    shadowColor: "#000",
+
+    shadowOpacity: 0.05,
+
+    shadowRadius: 10,
+
+    elevation: 2,
   },
 
-  forgot: {
-    color: "#FF8C94",
-    marginTop: 12,
-    textAlign: "right",
+  passwordInput: {
+    flex: 1,
+
+    fontSize: 16,
+
+    color: "#111",
+
+    paddingVertical: 14,
+  },
+
+  // 🔥 ROW
+  row: {
+    flexDirection: "row",
+
+    alignItems: "center",
+
+    justifyContent: "space-between",
+
+    marginTop: 5,
+  },
+
+  // 🔥 REMEMBER
+  rememberBox: {
+    flexDirection: "row",
+
+    alignItems: "center",
+  },
+
+  checkbox: {
+    width: 18,
+    height: 18,
+
+    borderRadius: 5,
+
+    backgroundColor: "#333",
+
+    marginRight: 10,
+  },
+
+  rememberText: {
+    color: "#444",
+
     fontWeight: "600",
+
+    fontSize: 14,
   },
 
+  // 🔥 FORGOT
+  forgot: {
+    color: "#FF6B6B",
+
+    fontWeight: "700",
+
+    fontSize: 14,
+  },
+
+  // 🔥 BUTTON
   loginBtn: {
-    backgroundColor: "#FF8C94",
-    padding: 16,
-    borderRadius: 25,
+    backgroundColor: "#050505",
+
+    paddingVertical: 20,
+
+    borderRadius: 999,
+
     alignItems: "center",
-    marginTop: 25,
+
+    marginTop: 40,
+
+    shadowColor: "#000",
+
+    shadowOpacity: 0.12,
+
+    shadowRadius: 14,
+
+    elevation: 6,
   },
 
   loginText: {
     color: "#fff",
+
     fontWeight: "bold",
-    fontSize: 16,
+
+    fontSize: 20,
   },
 
-  signupBtn: {
-    borderColor: "#FF8C94",
-    borderWidth: 1.5,
-    padding: 16,
-    borderRadius: 25,
-    alignItems: "center",
-    marginTop: 12,
-  },
-
+  // 🔥 SIGNUP
   signupText: {
-    color: "#FF8C94",
-    fontWeight: "bold",
+    marginTop: 40,
+
+    textAlign: "center",
+
+    color: "#6B6B6B",
+
     fontSize: 16,
+
+    fontWeight: "500",
+  },
+
+  signupHighlight: {
+    color: "#FF6B6B",
+
+    fontWeight: "bold",
   },
 
   disabledBtn: {
