@@ -7,10 +7,11 @@ import {
   TextInput,
 } from "react-native";
 
-import { LinearGradient } from "expo-linear-gradient";
-import { useState, useEffect } from "react";
+import {
+  useState,
+  useEffect,
+} from "react";
 
-// 🔥 FIREBASE
 import {
   collection,
   onSnapshot,
@@ -18,18 +19,33 @@ import {
   doc,
   addDoc,
   increment,
+  serverTimestamp,
+  arrayUnion,
+  arrayRemove,
 } from "firebase/firestore";
 
-import { db, auth } from "../firebase";
+import {
+  db,
+  auth,
+} from "../firebase";
 
-export default function HomeScreen({ navigation }) {
-  const [ideas, setIdeas] = useState([]);
-  const [search, setSearch] = useState("");
+export default function HomeScreen({
+  navigation,
+}) {
+
+  const [ideas, setIdeas] =
+    useState([]);
+
+  const [search, setSearch] =
+    useState("");
+
   const [userCoins, setUserCoins] =
     useState(0);
 
-  const [selectedCategory, setSelectedCategory] =
-    useState("All");
+  const [
+    selectedCategory,
+    setSelectedCategory,
+  ] = useState("All");
 
   const categories = [
     "All",
@@ -43,68 +59,99 @@ export default function HomeScreen({ navigation }) {
 
   // 🔥 FETCH IDEAS
   useEffect(() => {
-    const unsub = onSnapshot(
-      collection(db, "ideas"),
-      (snapshot) => {
-        const data = snapshot.docs.map(
-          (doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          })
-        );
 
-        setIdeas(data);
-      }
-    );
+    const unsub =
+      onSnapshot(
+        collection(db, "ideas"),
+        (snapshot) => {
+
+          const data =
+            snapshot.docs.map(
+              (docSnap) => ({
+                id: docSnap.id,
+                ...docSnap.data(),
+              })
+            );
+
+          // 🔥 TRENDING SORT
+          data.sort((a, b) => {
+
+            const scoreA =
+              (a.likes || 0) +
+              (a.coins || 0);
+
+            const scoreB =
+              (b.likes || 0) +
+              (b.coins || 0);
+
+            return scoreB - scoreA;
+          });
+
+          setIdeas(data);
+        }
+      );
 
     return () => unsub();
+
   }, []);
 
-  // 🔥 FETCH USER COINS
+  // 🔥 USER COINS
   useEffect(() => {
-    const user = auth.currentUser;
+
+    const user =
+      auth.currentUser;
 
     if (!user) return;
 
-    const unsub = onSnapshot(
-      doc(db, "users", user.uid),
-      (snap) => {
-        if (snap.exists()) {
-          setUserCoins(
-            snap.data().coins || 0
-          );
+    const unsub =
+      onSnapshot(
+        doc(
+          db,
+          "users",
+          user.uid
+        ),
+        (snap) => {
+
+          if (
+            snap.exists()
+          ) {
+
+            setUserCoins(
+              snap.data().coins || 0
+            );
+          }
         }
-      }
-    );
+      );
 
     return () => unsub();
+
   }, []);
 
   // ❤️ SUPPORT
-  const handleLike = async (
-    item
-  ) => {
+  const handleLike = async (item) => {
+
     try {
+
       const user =
         auth.currentUser;
 
       if (!user) {
+
         alert(
           "Login required 😢"
         );
+
         return;
       }
 
-      const likedUsers =
-        item.likedBy || [];
-
       const alreadyLiked =
-        likedUsers.includes(
+        item.likedBy?.includes(
           user.uid
         );
 
+      // ❤️ REMOVE SUPPORT
       if (alreadyLiked) {
-        // REMOVE SUPPORT
+
         await updateDoc(
           doc(
             db,
@@ -112,25 +159,25 @@ export default function HomeScreen({ navigation }) {
             item.id
           ),
           {
-            likes: increment(-1),
+            likes:
+              increment(-1),
 
             likedBy:
-              likedUsers.filter(
-                (id) =>
-                  id !== user.uid
+              arrayRemove(
+                user.uid
               ),
           }
         );
-      } else {
-        // REMOVE WEAK IF EXIST
-        const weakUsers =
-          item.weakBy || [];
 
+      } else {
+
+        // ❌ REMOVE WEAK
         if (
-          weakUsers.includes(
+          item.weakBy?.includes(
             user.uid
           )
         ) {
+
           await updateDoc(
             doc(
               db,
@@ -142,18 +189,14 @@ export default function HomeScreen({ navigation }) {
                 increment(-1),
 
               weakBy:
-                weakUsers.filter(
-                  (
-                    id
-                  ) =>
-                    id !==
-                    user.uid
+                arrayRemove(
+                  user.uid
                 ),
             }
           );
         }
 
-        // ADD SUPPORT
+        // ❤️ ADD SUPPORT
         await updateDoc(
           doc(
             db,
@@ -161,45 +204,53 @@ export default function HomeScreen({ navigation }) {
             item.id
           ),
           {
-            likes: increment(1),
+            likes:
+              increment(1),
 
-            likedBy: [
-              ...likedUsers,
-              user.uid,
-            ],
+            likedBy:
+              arrayUnion(
+                user.uid
+              ),
           }
         );
       }
 
     } catch (err) {
+
       console.log(err);
+
+      alert(
+        "Something went wrong 😢"
+      );
     }
   };
 
   // 📉 WEAK PITCH
   const handleWeakPitch =
     async (item) => {
+
       try {
+
         const user =
           auth.currentUser;
 
         if (!user) {
+
           alert(
             "Login required 😢"
           );
+
           return;
         }
 
-        const weakUsers =
-          item.weakBy || [];
-
         const alreadyWeak =
-          weakUsers.includes(
+          item.weakBy?.includes(
             user.uid
           );
 
+        // ❌ REMOVE WEAK
         if (alreadyWeak) {
-          // REMOVE WEAK
+
           await updateDoc(
             doc(
               db,
@@ -211,25 +262,21 @@ export default function HomeScreen({ navigation }) {
                 increment(-1),
 
               weakBy:
-                weakUsers.filter(
-                  (
-                    id
-                  ) =>
-                    id !==
-                    user.uid
+                arrayRemove(
+                  user.uid
                 ),
             }
           );
-        } else {
-          // REMOVE SUPPORT
-          const likedUsers =
-            item.likedBy || [];
 
+        } else {
+
+          // ❤️ REMOVE SUPPORT
           if (
-            likedUsers.includes(
+            item.likedBy?.includes(
               user.uid
             )
           ) {
+
             await updateDoc(
               doc(
                 db,
@@ -238,23 +285,17 @@ export default function HomeScreen({ navigation }) {
               ),
               {
                 likes:
-                  increment(
-                    -1
-                  ),
+                  increment(-1),
 
                 likedBy:
-                  likedUsers.filter(
-                    (
-                      id
-                    ) =>
-                      id !==
-                      user.uid
+                  arrayRemove(
+                    user.uid
                   ),
               }
             );
           }
 
-          // ADD WEAK
+          // 📉 ADD WEAK
           await updateDoc(
             doc(
               db,
@@ -265,41 +306,54 @@ export default function HomeScreen({ navigation }) {
               weakCount:
                 increment(1),
 
-              weakBy: [
-                ...weakUsers,
-                user.uid,
-              ],
+              weakBy:
+                arrayUnion(
+                  user.uid
+                ),
             }
           );
         }
 
       } catch (err) {
+
         console.log(err);
+
+        alert(
+          "Something went wrong 😢"
+        );
       }
     };
 
   // 💰 INVEST
   const handleInvest =
     async (item) => {
+
       try {
+
         const user =
           auth.currentUser;
 
         if (!user) {
+
           alert(
             "Login required 😢"
           );
+
           return;
         }
 
-        if (userCoins < 100) {
+        if (
+          userCoins < 100
+        ) {
+
           alert(
             "Not enough coins 😢"
           );
+
           return;
         }
 
-        // IDEA COINS +
+        // 🔥 IDEA COINS +
         await updateDoc(
           doc(
             db,
@@ -312,7 +366,7 @@ export default function HomeScreen({ navigation }) {
           }
         );
 
-        // USER COINS -
+        // 🔥 USER COINS -
         await updateDoc(
           doc(
             db,
@@ -325,18 +379,24 @@ export default function HomeScreen({ navigation }) {
           }
         );
 
-        // SAVE INVESTMENT
+        // 🔥 SAVE INVESTMENT
         await addDoc(
           collection(
             db,
             "investments"
           ),
           {
-            userId: user.uid,
-            ideaId: item.id,
+            userId:
+              user.uid,
+
+            ideaId:
+              item.id,
+
             ideaTitle:
               item.title,
+
             amount: 100,
+
             createdAt:
               Date.now(),
           }
@@ -347,6 +407,78 @@ export default function HomeScreen({ navigation }) {
         );
 
       } catch (err) {
+
+        console.log(err);
+      }
+    };
+
+  // 🤝 JOIN TEAM
+  const handleJoinTeam =
+    async (item) => {
+
+      try {
+
+        const user =
+          auth.currentUser;
+
+        if (!user) {
+
+          alert(
+            "Login required 😢"
+          );
+
+          return;
+        }
+
+        // ❌ OWN IDEA
+        if (
+          user.uid ===
+          item.userId
+        ) {
+
+          alert(
+            "You cannot join your own team 😭"
+          );
+
+          return;
+        }
+
+        // 🔥 SAVE REQUEST
+        await addDoc(
+          collection(
+            db,
+            "teamRequests"
+          ),
+          {
+            ownerId:
+              item.userId,
+
+            senderId:
+              user.uid,
+
+            senderEmail:
+              user.email,
+
+            ideaId:
+              item.id,
+
+            ideaTitle:
+              item.title,
+
+            status:
+              "pending",
+
+            createdAt:
+              serverTimestamp(),
+          }
+        );
+
+        alert(
+          "🤝 Team request sent!"
+        );
+
+      } catch (err) {
+
         console.log(err);
       }
     };
@@ -354,6 +486,7 @@ export default function HomeScreen({ navigation }) {
   // 🔍 FILTER
   const filteredIdeas =
     ideas.filter((item) => {
+
       const matchesSearch =
         item.title
           ?.toLowerCase()
@@ -364,6 +497,7 @@ export default function HomeScreen({ navigation }) {
       const matchesCategory =
         selectedCategory ===
           "All" ||
+
         item.category
           ?.toLowerCase()
           .includes(
@@ -377,24 +511,19 @@ export default function HomeScreen({ navigation }) {
     });
 
   return (
+
     <ScrollView
       style={styles.container}
       showsVerticalScrollIndicator={
         false
       }
     >
+
       {/* HEADER */}
-      <LinearGradient
-        colors={[
-          "#FF8C94",
-          "#FFB6C1",
-        ]}
-        style={styles.header}
-      >
-        <Text
-          style={styles.heading}
-        >
-          Discover Ideas 💡
+      <View style={styles.header}>
+
+        <Text style={styles.heading}>
+          Discover Ideas
         </Text>
 
         <Text style={styles.coins}>
@@ -403,10 +532,13 @@ export default function HomeScreen({ navigation }) {
 
         {/* SEARCH */}
         <TextInput
-          placeholder="Search ideas..."
+          placeholder="Search startup ideas..."
+          placeholderTextColor="#999"
           style={styles.search}
           value={search}
-          onChangeText={setSearch}
+          onChangeText={
+            setSearch
+          }
         />
 
         {/* QUIZ */}
@@ -418,11 +550,15 @@ export default function HomeScreen({ navigation }) {
             )
           }
         >
+
           <Text
-            style={styles.quizText}
+            style={
+              styles.quizText
+            }
           >
-            🎮 Play Finance Quiz
+            🎮 Play Daily Quiz
           </Text>
+
         </TouchableOpacity>
 
         {/* FILTERS */}
@@ -433,8 +569,10 @@ export default function HomeScreen({ navigation }) {
           }
           style={styles.filterRow}
         >
+
           {categories.map(
             (cat) => (
+
               <TouchableOpacity
                 key={cat}
                 style={[
@@ -450,6 +588,7 @@ export default function HomeScreen({ navigation }) {
                   )
                 }
               >
+
                 <Text
                   style={[
                     styles.filterText,
@@ -461,15 +600,19 @@ export default function HomeScreen({ navigation }) {
                 >
                   {cat}
                 </Text>
+
               </TouchableOpacity>
             )
           )}
+
         </ScrollView>
-      </LinearGradient>
+
+      </View>
 
       {/* IDEAS */}
       {filteredIdeas.map(
         (item) => {
+
           const isSupported =
             item.likedBy?.includes(
               auth.currentUser?.uid
@@ -480,33 +623,87 @@ export default function HomeScreen({ navigation }) {
               auth.currentUser?.uid
             );
 
+          const isTrending =
+            (item.likes || 0) > 5 ||
+            (item.coins || 0) > 500;
+
           return (
+
             <View
               key={item.id}
               style={styles.card}
             >
-              {/* TITLE */}
-              <Text
-                style={styles.title}
-              >
-                {item.title}
-              </Text>
 
-              {/* CATEGORY */}
-              <Text
+              {/* TOP */}
+              <View
                 style={
-                  styles.category
+                  styles.topRow
                 }
               >
-                {item.category}
-              </Text>
 
-              {/* AI BOX */}
+                <View
+                  style={{
+                    flex: 1,
+                  }}
+                >
+
+                  <Text
+                    style={
+                      styles.title
+                    }
+                  >
+                    {item.title}
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.category
+                    }
+                  >
+                    {item.category}
+                  </Text>
+
+                  {/* 🔥 USER NAME */}
+                  <Text
+                    style={
+                      styles.username
+                    }
+                  >
+                    👤 by{" "}
+                    {item.userName ||
+                      "Anonymous"}
+                  </Text>
+
+                </View>
+
+                {isTrending && (
+
+                  <View
+                    style={
+                      styles.trending
+                    }
+                  >
+
+                    <Text
+                      style={
+                        styles.trendingText
+                      }
+                    >
+                      🔥 Trending
+                    </Text>
+
+                  </View>
+                )}
+
+              </View>
+
+              {/* AI */}
               <View
                 style={
                   styles.aiBox
                 }
               >
+
                 <Text
                   style={
                     styles.aiText
@@ -528,6 +725,7 @@ export default function HomeScreen({ navigation }) {
                     "High"}{" "}
                   Demand
                 </Text>
+
               </View>
 
               {/* PROBLEM */}
@@ -547,34 +745,37 @@ export default function HomeScreen({ navigation }) {
               {/* STATS */}
               <View
                 style={
-                  styles.rowBetween
+                  styles.statsRow
                 }
               >
-                <Text>
+
+                <Text
+                  style={
+                    styles.stat
+                  }
+                >
                   💰{" "}
-                  {item.coins ||
-                    0}
+                  {item.coins || 0}
                 </Text>
 
-                <View
-                  style={{
-                    flexDirection:
-                      "row",
-                    gap: 10,
-                  }}
+                <Text
+                  style={
+                    styles.stat
+                  }
                 >
-                  <Text>
-                    ❤️{" "}
-                    {item.likes ||
-                      0}
-                  </Text>
+                  ❤️{" "}
+                  {item.likes || 0}
+                </Text>
 
-                  <Text>
-                    📉{" "}
-                    {item.weakCount ||
-                      0}
-                  </Text>
-                </View>
+                <Text
+                  style={
+                    styles.stat
+                  }
+                >
+                  📉{" "}
+                  {item.weakCount || 0}
+                </Text>
+
               </View>
 
               {/* REACTIONS */}
@@ -583,6 +784,7 @@ export default function HomeScreen({ navigation }) {
                   styles.actions
                 }
               >
+
                 {/* SUPPORT */}
                 <TouchableOpacity
                   style={[
@@ -597,9 +799,10 @@ export default function HomeScreen({ navigation }) {
                     )
                   }
                 >
+
                   <Text
                     style={
-                      styles.heart
+                      styles.emoji
                     }
                   >
                     {isSupported
@@ -607,33 +810,29 @@ export default function HomeScreen({ navigation }) {
                       : "🤍"}
                   </Text>
 
-                  <View>
-                    <Text
-                      style={
-                        styles.actionText
-                      }
-                    >
-                      {isSupported
-                        ? "Supported"
-                        : "Support"}
-                    </Text>
+                  <Text
+                    style={[
+                      styles.actionText,
 
-                    <Text
-                      style={
-                        styles.countText
-                      }
-                    >
-                      ❤️{" "}
-                      {item.likes ||
-                        0}
-                    </Text>
-                  </View>
+                      {
+                        color:
+                          isSupported
+                            ? "#fff"
+                            : "#111",
+                      },
+                    ]}
+                  >
+                    {isSupported
+                      ? "Supported"
+                      : "Support"}
+                  </Text>
+
                 </TouchableOpacity>
 
                 {/* WEAK */}
                 <TouchableOpacity
                   style={[
-                    styles.commentBtn,
+                    styles.likeBtn,
 
                     isWeak &&
                       styles.activeWeakBtn,
@@ -644,36 +843,32 @@ export default function HomeScreen({ navigation }) {
                     )
                   }
                 >
+
                   <Text
                     style={
-                      styles.weakEmoji
+                      styles.emoji
                     }
                   >
-                    {isWeak
-                      ? "📉"
-                      : "📊"}
+                    📉
                   </Text>
 
-                  <View>
-                    <Text
-                      style={
-                        styles.actionText
-                      }
-                    >
-                      Weak Pitch
-                    </Text>
+                  <Text
+                    style={[
+                      styles.actionText,
 
-                    <Text
-                      style={
-                        styles.countText
-                      }
-                    >
-                      📉{" "}
-                      {item.weakCount ||
-                        0}
-                    </Text>
-                  </View>
+                      {
+                        color:
+                          isWeak
+                            ? "#fff"
+                            : "#111",
+                      },
+                    ]}
+                  >
+                    Weak Pitch
+                  </Text>
+
                 </TouchableOpacity>
+
               </View>
 
               {/* BUTTONS */}
@@ -682,6 +877,8 @@ export default function HomeScreen({ navigation }) {
                   styles.bottomActions
                 }
               >
+
+                {/* INVEST */}
                 <TouchableOpacity
                   style={
                     styles.investBtn
@@ -692,6 +889,7 @@ export default function HomeScreen({ navigation }) {
                     )
                   }
                 >
+
                   <Text
                     style={
                       styles.btnText
@@ -699,248 +897,277 @@ export default function HomeScreen({ navigation }) {
                   >
                     💰 Invest
                   </Text>
+
                 </TouchableOpacity>
 
+                {/* TEAM */}
                 <TouchableOpacity
                   style={
                     styles.teamBtn
                   }
+                  onPress={() =>
+                    handleJoinTeam(
+                      item
+                    )
+                  }
                 >
+
                   <Text
                     style={
-                      styles.btnText
+                      styles.teamBtnText
                     }
                   >
                     🤝 Join Team
                   </Text>
+
                 </TouchableOpacity>
+
               </View>
+
             </View>
           );
         }
       )}
 
       <View
-        style={{ height: 40 }}
+        style={{ height: 120 }}
       />
+
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor:
-      "#FFF5F7",
-  },
+const styles =
+  StyleSheet.create({
 
-  header: {
-    padding: 20,
-    paddingTop: 60,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-  },
+    container: {
+      flex: 1,
+      backgroundColor:
+        "#F7F2EA",
+    },
 
-  heading: {
-    color: "#fff",
-    fontSize: 24,
-    fontWeight: "bold",
-  },
+    header: {
+      paddingTop: 65,
+      paddingHorizontal: 22,
+      paddingBottom: 24,
+    },
 
-  coins: {
-    color: "#fff",
-    marginTop: 5,
-    fontSize: 16,
-  },
+    heading: {
+      fontSize: 38,
+      fontWeight: "bold",
+      color: "#111",
+    },
 
-  search: {
-    backgroundColor: "#fff",
-    marginTop: 15,
-    borderRadius: 20,
-    padding: 12,
-  },
+    coins: {
+      marginTop: 8,
+      color: "#666",
+      fontSize: 16,
+    },
 
-  quizBtn: {
-    backgroundColor:
-      "#352D90",
-    marginTop: 15,
-    padding: 15,
-    borderRadius: 18,
-    alignItems: "center",
-  },
+    search: {
+      backgroundColor:
+        "#fff",
+      marginTop: 22,
+      borderRadius: 22,
+      padding: 18,
+      fontSize: 15,
+      elevation: 2,
+    },
 
-  quizText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
+    quizBtn: {
+      backgroundColor:
+        "#111",
+      marginTop: 18,
+      padding: 18,
+      borderRadius: 22,
+      alignItems: "center",
+    },
 
-  filterRow: {
-    marginTop: 20,
-  },
+    quizText: {
+      color: "#fff",
+      fontWeight: "bold",
+      fontSize: 16,
+    },
 
-  filterBtn: {
-    backgroundColor: "#fff",
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 20,
-    marginRight: 10,
-  },
+    filterRow: {
+      marginTop: 20,
+    },
 
-  activeFilter: {
-    backgroundColor:
-      "#FF4D8D",
-  },
+    filterBtn: {
+      backgroundColor:
+        "#fff",
+      paddingHorizontal: 18,
+      paddingVertical: 11,
+      borderRadius: 999,
+      marginRight: 10,
+    },
 
-  filterText: {
-    color: "#444",
-  },
+    activeFilter: {
+      backgroundColor:
+        "#111",
+    },
 
-  activeFilterText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
+    filterText: {
+      color: "#444",
+      fontWeight: "600",
+    },
 
-  card: {
-    backgroundColor: "#fff",
-    margin: 15,
-    padding: 18,
-    borderRadius: 25,
-    elevation: 5,
-  },
+    activeFilterText: {
+      color: "#fff",
+    },
 
-  title: {
-    fontSize: 22,
-    fontWeight: "bold",
-  },
+    card: {
+      backgroundColor:
+        "#fff",
+      marginHorizontal: 18,
+      marginBottom: 18,
+      borderRadius: 30,
+      padding: 22,
+      elevation: 3,
+    },
 
-  category: {
-    color: "#888",
-    marginTop: 5,
-  },
+    topRow: {
+      flexDirection: "row",
+      justifyContent:
+        "space-between",
+      alignItems: "center",
+    },
 
-  aiBox: {
-    flexDirection: "row",
-    justifyContent:
-      "space-between",
-    backgroundColor:
-      "#FFF0F3",
-    padding: 12,
-    borderRadius: 15,
-    marginTop: 15,
-  },
+    title: {
+      fontSize: 24,
+      fontWeight: "bold",
+      color: "#111",
+    },
 
-  aiText: {
-    fontWeight: "600",
-    color: "#444",
-  },
+    category: {
+      marginTop: 6,
+      color: "#777",
+    },
 
-  text: {
-    marginTop: 15,
-    fontSize: 15,
-    color: "#444",
-    lineHeight: 24,
-  },
+    username: {
+      marginTop: 8,
+      color: "#999",
+      fontSize: 13,
+      fontWeight: "600",
+    },
 
-  rowBetween: {
-    flexDirection: "row",
-    justifyContent:
-      "space-between",
-    alignItems: "center",
-    marginTop: 15,
-  },
+    trending: {
+      backgroundColor:
+        "#111",
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 999,
+    },
 
-  actions: {
-    flexDirection: "row",
-    justifyContent:
-      "space-between",
-    marginTop: 20,
-  },
+    trendingText: {
+      color: "#fff",
+      fontWeight: "600",
+      fontSize: 12,
+    },
 
-  likeBtn: {
-    flex: 1,
-    backgroundColor:
-      "#FFE7EC",
-    padding: 12,
-    borderRadius: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    marginRight: 8,
-  },
+    aiBox: {
+      flexDirection: "row",
+      justifyContent:
+        "space-between",
+      backgroundColor:
+        "#F5F0E6",
+      borderRadius: 20,
+      padding: 16,
+      marginTop: 18,
+    },
 
-  activeLikeBtn: {
-    backgroundColor:
-      "#FFD4DF",
-    borderWidth: 1,
-    borderColor: "#FF4D8D",
-  },
+    aiText: {
+      color: "#444",
+      fontWeight: "600",
+    },
 
-  commentBtn: {
-    flex: 1,
-    backgroundColor:
-      "#FFF0E8",
-    padding: 12,
-    borderRadius: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    marginLeft: 8,
-  },
+    text: {
+      marginTop: 16,
+      color: "#444",
+      lineHeight: 24,
+      fontSize: 15,
+    },
 
-  activeWeakBtn: {
-    backgroundColor:
-      "#FFD6D6",
-    borderWidth: 1,
-    borderColor: "#FF6B6B",
-  },
+    statsRow: {
+      flexDirection: "row",
+      justifyContent:
+        "space-between",
+      marginTop: 22,
+    },
 
-  heart: {
-    fontSize: 28,
-    marginRight: 10,
-  },
+    stat: {
+      fontWeight: "600",
+      color: "#444",
+    },
 
-  weakEmoji: {
-    fontSize: 24,
-    marginRight: 10,
-  },
+    actions: {
+      flexDirection: "row",
+      marginTop: 22,
+    },
 
-  actionText: {
-    fontWeight: "bold",
-    color: "#444",
-  },
+    likeBtn: {
+      flex: 1,
+      backgroundColor:
+        "#F5F0E6",
+      padding: 16,
+      borderRadius: 20,
+      alignItems: "center",
+      marginRight: 8,
+    },
 
-  countText: {
-    fontSize: 11,
-    color: "#666",
-    marginTop: 2,
-  },
+    activeLikeBtn: {
+      backgroundColor:
+        "#111",
+    },
 
-  bottomActions: {
-    flexDirection: "row",
-    marginTop: 20,
-  },
+    activeWeakBtn: {
+      backgroundColor:
+        "#2C2C2C",
+    },
 
-  investBtn: {
-    flex: 1,
-    backgroundColor:
-      "#FF6B81",
-    padding: 14,
-    borderRadius: 18,
-    alignItems: "center",
-    marginRight: 8,
-  },
+    emoji: {
+      fontSize: 26,
+    },
 
-  teamBtn: {
-    flex: 1,
-    backgroundColor:
-      "#352D90",
-    padding: 14,
-    borderRadius: 18,
-    alignItems: "center",
-    marginLeft: 8,
-  },
+    actionText: {
+      marginTop: 8,
+      fontWeight: "bold",
+    },
 
-  btnText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
-});
+    bottomActions: {
+      flexDirection: "row",
+      marginTop: 22,
+    },
+
+    investBtn: {
+      flex: 1,
+      backgroundColor:
+        "#111",
+      padding: 18,
+      borderRadius: 22,
+      alignItems: "center",
+      marginRight: 8,
+    },
+
+    teamBtn: {
+      flex: 1,
+      backgroundColor:
+        "#D9B44A",
+      padding: 18,
+      borderRadius: 22,
+      alignItems: "center",
+      marginLeft: 8,
+    },
+
+    btnText: {
+      color: "#fff",
+      fontWeight: "bold",
+      fontSize: 15,
+    },
+
+    teamBtnText: {
+      color: "#111",
+      fontWeight: "bold",
+      fontSize: 15,
+    },
+  });

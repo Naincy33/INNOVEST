@@ -7,11 +7,9 @@
     "icon": "./assets/images/icon.png",
     "scheme": "innovest",
     "userInterfaceStyle": "automatic",
-
     "ios": {
       "supportsTablet": true
     },
-
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -20,11 +18,9 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       }
     },
-
     "web": {
       "favicon": "./assets/images/favicon.png"
     },
-
     "plugins": [
       [
         "expo-splash-screen",
@@ -34,7 +30,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-web-browser"
     ]
   }
 }

@@ -7,13 +7,24 @@ import {
   ScrollView,
   Image,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+
 import { useState, useEffect } from "react";
 
 import * as ImagePicker from "expo-image-picker";
 
+import {
+  doc,
+  onSnapshot,
+  updateDoc,
+  collection,
+  query,
+  where,
+  onSnapshot as fireSnapshot,
+} from "firebase/firestore";
+
+import { signOut } from "firebase/auth";
+
 import { db, auth } from "../firebase";
-import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 
 export default function ProfileScreen({ navigation }) {
   const [name, setName] = useState("");
@@ -21,21 +32,53 @@ export default function ProfileScreen({ navigation }) {
   const [coins, setCoins] = useState(0);
   const [image, setImage] = useState(null);
   const [editing, setEditing] = useState(false);
+  const [ideaCount, setIdeaCount] = useState(0);
+  const [investmentCount, setInvestmentCount] = useState(0);
 
   const user = auth.currentUser;
 
-  // 🔥 FETCH USER DATA
+  // 🔥 USER DATA
   useEffect(() => {
     if (!user) return;
 
     const unsub = onSnapshot(doc(db, "users", user.uid), (snap) => {
       if (snap.exists()) {
         const data = snap.data();
+
         setName(data.name || "");
         setBio(data.bio || "");
         setCoins(data.coins || 0);
         setImage(data.photo || null);
       }
+    });
+
+    return () => unsub();
+  }, []);
+
+  // 🔥 IDEA COUNT
+  useEffect(() => {
+    if (!user) return;
+
+    const q = query(collection(db, "ideas"), where("userId", "==", user.uid));
+
+    const unsub = fireSnapshot(q, (snap) => {
+      setIdeaCount(snap.docs.length);
+    });
+
+    return () => unsub();
+  }, []);
+
+  // 🔥 INVESTMENT COUNT
+  useEffect(() => {
+    if (!user) return;
+
+    const q = query(
+      collection(db, "investments"),
+      where("userId", "==", user.uid)
+    );
+
+    const unsub = fireSnapshot(q, (snap) => {
+      setInvestmentCount(snap.docs.length);
     });
 
     return () => unsub();
@@ -53,7 +96,7 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
-  // 🔥 SAVE PROFILE
+  // 🔥 SAVE
   const handleSave = async () => {
     await updateDoc(doc(db, "users", user.uid), {
       name,
@@ -62,26 +105,33 @@ export default function ProfileScreen({ navigation }) {
     });
 
     setEditing(false);
+
     alert("Profile Updated 🚀");
   };
 
-  return (
-    <ScrollView style={styles.container}>
-      {/* HEADER */}
-      <LinearGradient colors={["#FF8C94", "#FFB6C1"]} style={styles.header}>
-        <Text style={styles.title}>My Profile</Text>
-      </LinearGradient>
+  // 🔥 LOGOUT
+  const handleLogout = async () => {
+    await signOut(auth);
 
-      {/* CARD */}
-      <View style={styles.card}>
-        
-        {/* PROFILE IMAGE */}
+    navigation.replace("SignIn");
+  };
+
+  return (
+    <ScrollView
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* HEADER */}
+      <View style={styles.header}>
+        <Text style={styles.heading}>Profile</Text>
+      </View>
+
+      {/* PROFILE CARD */}
+      <View style={styles.profileCard}>
         <TouchableOpacity onPress={editing ? pickImage : null}>
           <Image
             source={{
-              uri:
-                image ||
-                "https://i.pravatar.cc/150?img=12",
+              uri: image || "https://i.pravatar.cc/300",
             }}
             style={styles.avatar}
           />
@@ -92,11 +142,13 @@ export default function ProfileScreen({ navigation }) {
           <TextInput
             value={name}
             onChangeText={setName}
+            placeholder="Name"
             style={styles.input}
-            placeholder="Enter name"
           />
         ) : (
-          <Text style={styles.name}>{name || "Your Name"}</Text>
+          <Text style={styles.name}>
+            {name || "Innovator"}
+          </Text>
         )}
 
         {/* BIO */}
@@ -104,181 +156,386 @@ export default function ProfileScreen({ navigation }) {
           <TextInput
             value={bio}
             onChangeText={setBio}
-            style={styles.bioInput}
-            placeholder="Write bio..."
+            placeholder="Bio..."
             multiline
+            style={styles.bioInput}
           />
         ) : (
-          <Text style={styles.bio}>{bio || "No bio yet..."}</Text>
+          <Text style={styles.bio}>
+            {bio || "Building the future 🚀"}
+          </Text>
         )}
+      </View>
 
-        {/* COINS */}
-        <Text style={styles.coins}>💰 {coins}</Text>
+      {/* IMPACT */}
+      <Text style={styles.section}>
+        Your Impact
+      </Text>
 
-        {/* STATS */}
-        <View style={styles.stats}>
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>{coins}</Text>
-            <Text style={styles.statLabel}>Coins</Text>
-          </View>
+      <View style={styles.grid}>
+        <View style={styles.box}>
+          <Text style={styles.big}>
+            {ideaCount}
+          </Text>
 
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>--</Text>
-            <Text style={styles.statLabel}>Investments</Text>
-          </View>
-
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>--</Text>
-            <Text style={styles.statLabel}>Ideas</Text>
-          </View>
+          <Text style={styles.small}>
+            IDEAS POSTED
+          </Text>
         </View>
 
-        {/* BUTTON */}
-        {editing ? (
-          <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-            <Text style={styles.btnText}>Save</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={styles.editBtn}
-            onPress={() => setEditing(true)}
-          >
-            <Text style={styles.editText}>Edit Profile</Text>
-          </TouchableOpacity>
-        )}
+        <View style={styles.box}>
+          <Text style={styles.big}>
+            {investmentCount}
+          </Text>
 
-        {/* LOGOUT */}
-        <TouchableOpacity
-          style={styles.logout}
-          onPress={() => navigation.replace("SignIn")}
-        >
-          <Text style={{ color: "#FF6B81" }}>Logout</Text>
-        </TouchableOpacity>
+          <Text style={styles.small}>
+            INVESTMENTS
+          </Text>
+        </View>
+
+        <View style={styles.box}>
+          <Text style={styles.big}>
+            {coins}
+          </Text>
+
+          <Text style={styles.small}>
+            COINS
+          </Text>
+        </View>
+
+        <View style={styles.box}>
+          <Text style={styles.big}>
+            Top 5%
+          </Text>
+
+          <Text style={styles.small}>
+            RANKING
+          </Text>
+        </View>
       </View>
+
+      {/* MENU */}
+      <View style={styles.menuContainer}>
+
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => navigation.navigate("MyIdeas")}
+        >
+          <Text style={styles.menuText}>
+            💡 My Ideas
+          </Text>
+
+          <Text style={styles.arrow}>
+            ›
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() =>
+            navigation.navigate("TeamRequests")
+          }
+        >
+          <Text style={styles.menuText}>
+            🤝 Team Requests
+          </Text>
+
+          <Text style={styles.arrow}>
+            ›
+          </Text>
+        </TouchableOpacity>
+
+      </View>
+
+      {/* BUTTON */}
+      {editing ? (
+        <TouchableOpacity
+          style={styles.editBtn}
+          onPress={handleSave}
+        >
+          <Text style={styles.editText}>
+            Save Profile
+          </Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity
+          style={styles.editBtn}
+          onPress={() => setEditing(true)}
+        >
+          <Text style={styles.editText}>
+            Edit Profile
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {/* SIGN OUT */}
+      <TouchableOpacity
+        style={styles.logoutBtn}
+        onPress={handleLogout}
+      >
+        <Text style={styles.logoutText}>
+          Sign Out
+        </Text>
+      </TouchableOpacity>
+
+      {/* EXTRA SPACE */}
+      <View style={{ height: 140 }} />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+
   container: {
     flex: 1,
-    backgroundColor: "#FFF5F7",
+    backgroundColor: "#F5F0E6",
   },
 
   header: {
-    padding: 20,
-    paddingTop: 60,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    paddingTop: 65,
+    paddingHorizontal: 24,
+    marginBottom: 10,
   },
 
-  title: {
-    color: "#fff",
-    fontSize: 22,
+  heading: {
+    fontSize: 38,
     fontWeight: "bold",
+    color: "#111",
   },
 
-  card: {
-    backgroundColor: "#fff",
-    margin: 15,
-    padding: 20,
-    borderRadius: 25,
+  profileCard: {
+    backgroundColor: "#FFFFFF",
+
+    marginHorizontal: 20,
+
+    borderRadius: 32,
+
+    paddingVertical: 34,
+    paddingHorizontal: 24,
+
     alignItems: "center",
-    elevation: 3,
+
+    shadowColor: "#000",
+
+    shadowOpacity: 0.06,
+
+    shadowRadius: 14,
+
+    elevation: 5,
   },
 
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    marginTop: -60,
-    borderWidth: 3,
-    borderColor: "#fff",
+    width: 120,
+    height: 120,
+
+    borderRadius: 999,
+
+    marginBottom: 20,
+
+    backgroundColor: "#EEE",
   },
 
   name: {
-    fontSize: 20,
+    fontSize: 34,
     fontWeight: "bold",
-    marginTop: 10,
+    color: "#111",
   },
 
   bio: {
-    color: "#666",
-    marginTop: 5,
-    textAlign: "center",
-  },
-
-  coins: {
     marginTop: 10,
-    fontWeight: "600",
+    color: "#777",
+    fontSize: 16,
+    textAlign: "center",
+    lineHeight: 22,
   },
 
-  stats: {
-    flexDirection: "row",
-    marginTop: 20,
-    width: "100%",
-    justifyContent: "space-between",
-  },
-
-  statBox: {
-    alignItems: "center",
-    flex: 1,
-  },
-
-  statNumber: {
+  section: {
+    fontSize: 20,
     fontWeight: "bold",
+
+    marginTop: 28,
+    marginBottom: 18,
+
+    marginHorizontal: 24,
+
+    color: "#111",
   },
 
-  statLabel: {
-    color: "#888",
-    fontSize: 12,
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+
+    paddingHorizontal: 20,
+  },
+
+  box: {
+    width: "47%",
+
+    backgroundColor: "#FFFFFF",
+
+    borderRadius: 24,
+
+    padding: 24,
+
+    marginBottom: 16,
+
+    shadowColor: "#000",
+
+    shadowOpacity: 0.05,
+
+    shadowRadius: 10,
+
+    elevation: 4,
+  },
+
+  big: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: "#111",
+  },
+
+  small: {
+    marginTop: 12,
+
+    color: "#8A8A8A",
+
+    fontWeight: "700",
+
+    letterSpacing: 0.5,
+  },
+
+  menuContainer: {
+    backgroundColor: "#FFFFFF",
+
+    marginHorizontal: 20,
+    marginTop: 10,
+
+    borderRadius: 24,
+
+    overflow: "hidden",
+
+    shadowColor: "#000",
+
+    shadowOpacity: 0.05,
+
+    shadowRadius: 10,
+
+    elevation: 4,
+  },
+
+  menuItem: {
+    flexDirection: "row",
+
+    alignItems: "center",
+
+    justifyContent: "space-between",
+
+    paddingVertical: 22,
+    paddingHorizontal: 22,
+
+    borderBottomWidth: 1,
+
+    borderBottomColor: "#F2F2F2",
+  },
+
+  menuText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#111",
+  },
+
+  arrow: {
+    fontSize: 28,
+    color: "#999",
   },
 
   editBtn: {
-    marginTop: 20,
-    borderWidth: 1,
-    borderColor: "#FF8C94",
-    padding: 10,
-    borderRadius: 20,
-    width: "60%",
+    backgroundColor: "#111",
+
+    marginHorizontal: 20,
+    marginTop: 24,
+
+    paddingVertical: 18,
+
+    borderRadius: 999,
+
     alignItems: "center",
+
+    shadowColor: "#000",
+
+    shadowOpacity: 0.12,
+
+    shadowRadius: 10,
+
+    elevation: 5,
   },
 
   editText: {
-    color: "#FF8C94",
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 17,
   },
 
-  saveBtn: {
-    marginTop: 20,
-    backgroundColor: "#FF8C94",
-    padding: 10,
-    borderRadius: 20,
-    width: "60%",
+  logoutBtn: {
+    borderWidth: 1.5,
+
+    borderColor: "#FF6B6B",
+
+    backgroundColor: "#FFF7F7",
+
+    marginHorizontal: 20,
+    marginTop: 18,
+
+    paddingVertical: 18,
+
+    borderRadius: 999,
+
     alignItems: "center",
   },
 
-  btnText: {
-    color: "#fff",
-    fontWeight: "600",
+  logoutText: {
+    color: "#FF6B6B",
+    fontWeight: "bold",
+    fontSize: 17,
   },
 
   input: {
-    borderBottomWidth: 1,
-    width: "60%",
-    textAlign: "center",
-    marginTop: 10,
+    width: "100%",
+
+    borderWidth: 1,
+
+    borderColor: "#E5E5E5",
+
+    borderRadius: 18,
+
+    padding: 14,
+
+    marginTop: 12,
+
+    fontSize: 16,
+
+    backgroundColor: "#FAFAFA",
   },
 
   bioInput: {
+    width: "100%",
+
     borderWidth: 1,
-    width: "80%",
-    marginTop: 10,
-    borderRadius: 10,
-    padding: 8,
-    textAlign: "center",
+
+    borderColor: "#E5E5E5",
+
+    borderRadius: 18,
+
+    padding: 14,
+
+    marginTop: 14,
+
+    minHeight: 100,
+
+    textAlignVertical: "top",
+
+    backgroundColor: "#FAFAFA",
   },
 
-  logout: {
-    marginTop: 15,
-  },
 });
