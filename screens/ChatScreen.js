@@ -28,23 +28,23 @@ import { Ionicons } from "@expo/vector-icons";
 export default function ChatScreen({ navigation }) {
   const [collaborations, setCollaborations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeRoom, setActiveRoom] = useState(null); // teamRequest item
+  const [activeRoom, setActiveRoom] = useState(null);
   const [messages, setMessages] = useState([]);
   const [messageText, setMessageText] = useState("");
 
   const flatListRef = useRef(null);
 
   // ==========================================
-  // 📁 FETCH COLLABORATIONS (Owner & Sender Accepted Requests)
+  // FETCH COLLABORATIONS
   // ==========================================
   useEffect(() => {
     const user = auth.currentUser;
+
     if (!user) {
       setLoading(false);
       return;
     }
 
-    // Two parallel listeners to merge Owner & Sender accepted requests
     const qOwner = query(
       collection(db, "teamRequests"),
       where("status", "==", "accepted"),
@@ -61,16 +61,26 @@ export default function ChatScreen({ navigation }) {
 
     const unsubOwner = onSnapshot(qOwner, (snap) => {
       snap.docs.forEach((d) => {
-        activeCollabsMap[d.id] = { id: d.id, ...d.data(), isOwner: true };
+        activeCollabsMap[d.id] = {
+          id: d.id,
+          ...d.data(),
+          isOwner: true,
+        };
       });
+
       setCollaborations(Object.values(activeCollabsMap));
       setLoading(false);
     });
 
     const unsubSender = onSnapshot(qSender, (snap) => {
       snap.docs.forEach((d) => {
-        activeCollabsMap[d.id] = { id: d.id, ...d.data(), isOwner: false };
+        activeCollabsMap[d.id] = {
+          id: d.id,
+          ...d.data(),
+          isOwner: false,
+        };
       });
+
       setCollaborations(Object.values(activeCollabsMap));
       setLoading(false);
     });
@@ -82,7 +92,7 @@ export default function ChatScreen({ navigation }) {
   }, []);
 
   // ==========================================
-  // 💬 STREAM CHAT MESSAGES
+  // STREAM MESSAGES
   // ==========================================
   useEffect(() => {
     if (!activeRoom) {
@@ -101,6 +111,7 @@ export default function ChatScreen({ navigation }) {
         id: d.id,
         ...d.data(),
       }));
+
       setMessages(data);
     });
 
@@ -108,17 +119,17 @@ export default function ChatScreen({ navigation }) {
   }, [activeRoom]);
 
   // ==========================================
-  // 🚀 SEND MESSAGE
+  // SEND MESSAGE
   // ==========================================
   const handleSendMessage = async () => {
     if (!messageText.trim()) return;
 
     try {
       const user = auth.currentUser;
-      if (!user) return;
 
       const txt = messageText.trim();
-      setMessageText(""); // Clear instantly for optimal UX
+
+      setMessageText("");
 
       await addDoc(collection(db, "chats"), {
         teamRequestId: activeRoom.id,
@@ -127,65 +138,115 @@ export default function ChatScreen({ navigation }) {
         text: txt,
         createdAt: Date.now(),
       });
+
     } catch (err) {
       console.log(err);
-      alert("Failed to send message: " + err.message);
+      alert(err.message);
     }
   };
 
   // ==========================================
-  // 🎨 RENDER TEAM LISTS
+  // TEAM LIST SCREEN
   // ==========================================
   if (activeRoom === null) {
     return (
       <View style={styles.container}>
+
         {/* HEADER */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={26} color="#111" />
+
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backBtn}
+          >
+            <Ionicons
+              name="arrow-back"
+              size={24}
+              color="#111"
+            />
           </TouchableOpacity>
-          <Text style={styles.heading}>💬 Team Chat</Text>
-          <Text style={styles.subHeading}>Brainstorm and scale your startups</Text>
+
+          <Text style={styles.heading}>
+            Team Chats 💬
+          </Text>
+
+          <Text style={styles.subHeading}>
+            Collaborate with your startup team
+          </Text>
         </View>
 
         {loading ? (
           <View style={styles.center}>
-            <ActivityIndicator size="large" color="#FF6B6B" />
+            <ActivityIndicator
+              size="large"
+              color="#D4AF37"
+            />
           </View>
         ) : (
           <FlatList
             data={collaborations}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContainer}
+            showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               <View style={styles.emptyBox}>
-                <Ionicons name="chatbubbles-outline" size={60} color="#DDD6C8" style={{ marginBottom: 12 }} />
-                <Text style={styles.emptyTitle}>No Collaboration Chats</Text>
+                <Ionicons
+                  name="chatbubbles-outline"
+                  size={70}
+                  color="#D4AF37"
+                />
+
+                <Text style={styles.emptyTitle}>
+                  No Team Chats
+                </Text>
+
                 <Text style={styles.emptySub}>
-                  When you accept join requests or get accepted onto other teams, your collaborative rooms will unlock here!
+                  Accept collaboration requests to unlock chats
                 </Text>
               </View>
             }
             renderItem={({ item }) => {
-              const partner = item.isOwner ? item.senderEmail : "Founder Team";
+
+              const partner =
+                item.isOwner
+                  ? item.senderEmail
+                  : "Founder Team";
+
               return (
                 <TouchableOpacity
                   style={styles.collabCard}
+                  activeOpacity={0.8}
                   onPress={() => setActiveRoom(item)}
-                  activeOpacity={0.7}
                 >
                   <View style={styles.collabIconBox}>
-                    <Ionicons name="people" size={26} color="#FF6B6B" />
+                    <Ionicons
+                      name="people"
+                      size={22}
+                      color="#111"
+                    />
                   </View>
+
                   <View style={styles.collabInfo}>
-                    <Text style={styles.ideaTitle} numberOfLines={1}>
+                    <Text
+                      style={styles.ideaTitle}
+                      numberOfLines={1}
+                    >
                       🚀 {item.ideaTitle}
                     </Text>
-                    <Text style={styles.partnerText} numberOfLines={1}>
-                      Teammate: {partner}
+
+                    <Text
+                      style={styles.partnerText}
+                      numberOfLines={1}
+                    >
+                      {partner}
                     </Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={20} color="#CCC" />
+
+                  <Ionicons
+                    name="chevron-forward"
+                    size={20}
+                    color="#999"
+                  />
                 </TouchableOpacity>
               );
             }}
@@ -196,47 +257,100 @@ export default function ChatScreen({ navigation }) {
   }
 
   // ==========================================
-  // 🎨 RENDER CHAT ROOM ROOM
+  // CHAT ROOM
   // ==========================================
-  const roomPartnerName = activeRoom.isOwner ? activeRoom.senderEmail : "Founder Team";
+  const roomPartnerName =
+    activeRoom.isOwner
+      ? activeRoom.senderEmail
+      : "Founder Team";
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
     >
-      {/* CHAT ROOM HEADER */}
+
+      {/* CHAT HEADER */}
       <View style={styles.chatHeader}>
-        <TouchableOpacity onPress={() => setActiveRoom(null)} style={styles.chatHeaderBackBtn}>
-          <Ionicons name="chevron-back" size={28} color="#fff" />
+
+        <TouchableOpacity
+          onPress={() => setActiveRoom(null)}
+          style={styles.chatHeaderBackBtn}
+        >
+          <Ionicons
+            name="chevron-back"
+            size={28}
+            color="#fff"
+          />
         </TouchableOpacity>
+
         <View style={styles.chatHeaderTitleBox}>
-          <Text style={styles.chatHeaderTitle} numberOfLines={1}>
+
+          <Text
+            style={styles.chatHeaderTitle}
+            numberOfLines={1}
+          >
             🚀 {activeRoom.ideaTitle}
           </Text>
-          <Text style={styles.chatHeaderPartner} numberOfLines={1}>
-            Teammate: {roomPartnerName}
+
+          <Text
+            style={styles.chatHeaderPartner}
+            numberOfLines={1}
+          >
+            {roomPartnerName}
           </Text>
         </View>
       </View>
 
-      {/* MESSAGES FLATLIST */}
+      {/* MESSAGES */}
       <FlatList
         ref={flatListRef}
         data={messages}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.messagesList}
         showsVerticalScrollIndicator={false}
-        onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-        onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
+        onContentSizeChange={() =>
+          flatListRef.current?.scrollToEnd({
+            animated: true,
+          })
+        }
         renderItem={({ item }) => {
-          const isMe = item.senderId === auth.currentUser?.uid;
+
+          const isMe =
+            item.senderId === auth.currentUser?.uid;
+
           return (
-            <View style={[styles.bubbleWrapper, isMe ? styles.bubbleRight : styles.bubbleLeft]}>
-              {!isMe && <Text style={styles.bubbleSender}>{item.senderEmail?.split("@")[0]}</Text>}
-              <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubblePartner]}>
-                <Text style={[styles.bubbleText, isMe ? styles.bubbleTextMe : styles.bubbleTextPartner]}>
+            <View
+              style={[
+                styles.bubbleWrapper,
+                isMe
+                  ? styles.bubbleRight
+                  : styles.bubbleLeft,
+              ]}
+            >
+
+              {!isMe && (
+                <Text style={styles.bubbleSender}>
+                  {item.senderEmail?.split("@")[0]}
+                </Text>
+              )}
+
+              <View
+                style={[
+                  styles.bubble,
+                  isMe
+                    ? styles.bubbleMe
+                    : styles.bubblePartner,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.bubbleText,
+                    isMe
+                      ? styles.bubbleTextMe
+                      : styles.bubbleTextPartner,
+                  ]}
+                >
                   {item.text}
                 </Text>
               </View>
@@ -245,23 +359,28 @@ export default function ChatScreen({ navigation }) {
         }}
       />
 
-      {/* INPUT BAR */}
+      {/* INPUT */}
       <View style={styles.inputBar}>
+
         <TextInput
           value={messageText}
           onChangeText={setMessageText}
-          placeholder="Type your message..."
-          placeholderTextColor="#999"
+          placeholder="Type a message..."
+          placeholderTextColor="#888"
           style={styles.textInput}
           multiline
         />
+
         <TouchableOpacity
           style={styles.sendBtn}
+          activeOpacity={0.8}
           onPress={handleSendMessage}
-          disabled={!messageText.trim()}
-          activeOpacity={0.7}
         >
-          <Ionicons name="send" size={20} color="#fff" />
+          <Ionicons
+            name="send"
+            size={18}
+            color="#111"
+          />
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -269,218 +388,278 @@ export default function ChatScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+
   container: {
     flex: 1,
     backgroundColor: "#F7F2EA",
   },
+
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
+
   header: {
     paddingTop: 60,
     paddingHorizontal: 24,
-    paddingBottom: 15,
+    paddingBottom: 18,
+
     backgroundColor: "#FFFFFF",
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+
     shadowColor: "#000",
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.05,
     shadowRadius: 10,
+
     elevation: 3,
   },
+
   backBtn: {
-    paddingVertical: 5,
-    alignSelf: "flex-start",
-    marginBottom: 8,
+    marginBottom: 12,
   },
+
   heading: {
     fontSize: 34,
     fontWeight: "bold",
-    color: "#0D0D0D",
-    letterSpacing: -1,
+    color: "#111",
   },
+
   subHeading: {
+    marginTop: 4,
     fontSize: 14,
-    color: "#6B6B6B",
-    marginTop: 2,
-    fontWeight: "500",
+    color: "#777",
   },
+
   listContainer: {
     padding: 20,
     paddingBottom: 60,
   },
+
   emptyBox: {
-    marginTop: 100,
+    marginTop: 120,
     alignItems: "center",
-    paddingHorizontal: 30,
   },
+
   emptyTitle: {
+    marginTop: 14,
     fontSize: 22,
     fontWeight: "bold",
     color: "#111",
-    marginTop: 10,
   },
+
   emptySub: {
+    marginTop: 6,
     fontSize: 14,
     color: "#777",
     textAlign: "center",
-    lineHeight: 22,
-    marginTop: 10,
+    paddingHorizontal: 40,
   },
+
   collabCard: {
     backgroundColor: "#FFFFFF",
+
     borderRadius: 22,
+
     padding: 18,
-    marginBottom: 14,
+
+    marginBottom: 15,
+
     flexDirection: "row",
     alignItems: "center",
+
     shadowColor: "#000",
-    shadowOpacity: 0.03,
+    shadowOpacity: 0.04,
     shadowRadius: 8,
+
     elevation: 2,
   },
+
   collabIconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: "#FFEAEB",
+    width: 50,
+    height: 50,
+
+    borderRadius: 16,
+
+    backgroundColor: "#F3E7C3",
+
     justifyContent: "center",
     alignItems: "center",
+
     marginRight: 14,
   },
+
   collabInfo: {
     flex: 1,
   },
+
   ideaTitle: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#111",
   },
+
   partnerText: {
+    marginTop: 4,
     fontSize: 13,
     color: "#777",
-    marginTop: 4,
-    fontWeight: "500",
   },
 
-  // ==========================================
-  // CHAT ROOM SPECIFIC STYLES
-  // ==========================================
+  // CHAT HEADER
   chatHeader: {
     flexDirection: "row",
     alignItems: "center",
+
     paddingTop: 60,
     paddingHorizontal: 20,
-    paddingBottom: 15,
-    backgroundColor: "#FF6B6B",
+    paddingBottom: 16,
+
+    backgroundColor: "#111111",
+
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 4,
   },
+
   chatHeaderBackBtn: {
-    padding: 5,
     marginRight: 10,
   },
+
   chatHeaderTitleBox: {
     flex: 1,
   },
+
   chatHeaderTitle: {
-    fontSize: 19,
+    fontSize: 18,
     fontWeight: "bold",
     color: "#FFFFFF",
   },
+
   chatHeaderPartner: {
+    marginTop: 3,
     fontSize: 12,
-    color: "rgba(255, 255, 255, 0.85)",
-    marginTop: 2,
-    fontWeight: "500",
+    color: "#D4AF37",
+    fontWeight: "600",
   },
+
+  // MESSAGES
   messagesList: {
     padding: 20,
     paddingBottom: 10,
   },
+
   bubbleWrapper: {
     marginBottom: 14,
     maxWidth: "80%",
   },
+
   bubbleLeft: {
     alignSelf: "flex-start",
   },
+
   bubbleRight: {
     alignSelf: "flex-end",
   },
+
   bubbleSender: {
-    fontSize: 10,
-    color: "#888",
-    fontWeight: "600",
     marginBottom: 4,
     marginLeft: 6,
+
+    fontSize: 10,
+    color: "#888",
+
+    fontWeight: "600",
   },
+
   bubble: {
-    borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.02,
-    shadowRadius: 4,
-    elevation: 1,
+
+    borderRadius: 20,
   },
+
   bubbleMe: {
-    backgroundColor: "#FF6B6B",
-    borderTopRightRadius: 4,
+    backgroundColor: "#111111",
+    borderTopRightRadius: 5,
   },
+
   bubblePartner: {
     backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 4,
-    borderWidth: 1.5,
-    borderColor: "#EAEAEA",
+
+    borderWidth: 1,
+    borderColor: "#ECE3D3",
+
+    borderTopLeftRadius: 5,
   },
+
   bubbleText: {
     fontSize: 15,
-    lineHeight: 20,
+    lineHeight: 22,
   },
+
   bubbleTextMe: {
     color: "#FFFFFF",
   },
+
   bubbleTextPartner: {
-    color: "#111",
+    color: "#111111",
   },
+
+  // INPUT BAR
   inputBar: {
     flexDirection: "row",
-    padding: 14,
-    backgroundColor: "#FFFFFF",
     alignItems: "center",
+
+    padding: 14,
+
+    backgroundColor: "#FFFFFF",
+
     borderTopWidth: 1,
-    borderTopColor: "#EAEAEA",
-    paddingBottom: Platform.OS === "ios" ? 28 : 14,
+    borderTopColor: "#ECE3D3",
+
+    paddingBottom:
+      Platform.OS === "ios"
+        ? 28
+        : 14,
   },
+
   textInput: {
     flex: 1,
+
     backgroundColor: "#F7F2EA",
+
     borderRadius: 24,
+
     paddingHorizontal: 18,
     paddingVertical: 10,
+
     fontSize: 15,
     color: "#111",
+
+    borderWidth: 1,
+    borderColor: "#E8E1D5",
+
     maxHeight: 100,
-    textAlignVertical: "center",
   },
+
   sendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#FF6B6B",
+    width: 46,
+    height: 46,
+
+    borderRadius: 23,
+
+    backgroundColor: "#D4AF37",
+
     justifyContent: "center",
     alignItems: "center",
+
     marginLeft: 12,
-    shadowColor: "#FF6B6B",
-    shadowOpacity: 0.2,
+
+    shadowColor: "#D4AF37",
+    shadowOpacity: 0.25,
     shadowRadius: 6,
-    elevation: 3,
+
+    elevation: 4,
   },
 });
