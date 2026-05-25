@@ -7,6 +7,8 @@ import {
   Alert,
 } from "react-native";
 
+import { Ionicons } from "@expo/vector-icons";
+
 import {
   useEffect,
   useState,
@@ -26,7 +28,7 @@ import {
   auth,
 } from "../firebase";
 
-export default function MyIdeasScreen() {
+export default function MyIdeasScreen({ navigation }) {
 
   const [ideas, setIdeas] =
     useState([]);
@@ -115,6 +117,17 @@ export default function MyIdeasScreen() {
 
       {/* HEADER */}
       <View style={styles.header}>
+
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons
+            name="arrow-back"
+            size={28}
+            color="#111"
+          />
+        </TouchableOpacity>
 
         <Text style={styles.heading}>
           My Ideas
@@ -248,9 +261,15 @@ const styles =
     },
 
     header: {
-      paddingTop: 70,
+      paddingTop: 60,
       paddingHorizontal: 24,
       marginBottom: 20,
+    },
+
+    backBtn: {
+      marginBottom: 15,
+      alignSelf: "flex-start",
+      padding: 5,
     },
 
     heading: {

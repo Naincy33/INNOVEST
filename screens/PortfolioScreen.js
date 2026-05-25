@@ -170,27 +170,39 @@ export default function PortfolioScreen() {
     Dimensions.get("window")
       .width;
 
-  // 🔥 GRAPH DATA
-  const chartData = {
-    labels: [
-      "Mon",
-      "Tue",
-      "Wed",
-      "Thu",
-      "Fri",
-    ],
+  // 🔥 DYNAMIC TIME-SERIES CHART DATA
+  const getDynamicChartData = () => {
+    if (investments.length === 0) {
+      return {
+        labels: ["Month 1", "Month 2", "Month 3", "Month 4", "Month 5", "Month 6"],
+        datasets: [{
+          data: [100, 250, 180, 500, 450, 800]
+        }]
+      };
+    }
 
-    datasets: [
-      {
-        data: [
-          20,
-          45,
-          28,
-          80,
-          totalInvested || 0,
-        ],
-      },
-    ],
+    // Sort investments by date ascending
+    const sorted = [...investments].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    
+    let runningTotal = 0;
+    const dataPoints = [];
+    const labels = [];
+
+    sorted.forEach((inv, idx) => {
+      runningTotal += inv.amount || 0;
+      dataPoints.push(runningTotal);
+      labels.push(`Inv ${idx + 1}`);
+    });
+
+    if (dataPoints.length === 1) {
+      dataPoints.unshift(0);
+      labels.unshift("Start");
+    }
+
+    return {
+      labels: labels.slice(-6),
+      datasets: [{ data: dataPoints.slice(-6) }]
+    };
   };
 
   return (
@@ -246,11 +258,16 @@ export default function PortfolioScreen() {
       <View style={styles.chartBox}>
 
         <Text style={styles.section}>
-          📈 Investment Trend
+          📈 Investment Trend {investments.length === 0 && "(Demo)"}
         </Text>
+        {investments.length === 0 && (
+          <Text style={{ fontSize: 13, color: "#888", marginTop: 6, fontStyle: "italic" }}>
+            Start investing in ideas to see your custom growth trend!
+          </Text>
+        )}
 
         <LineChart
-          data={chartData}
+          data={getDynamicChartData()}
           width={screenWidth - 40}
           height={220}
 

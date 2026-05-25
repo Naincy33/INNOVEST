@@ -184,14 +184,22 @@ export default function LeaderboardScreen() {
 
               <View>
 
-                <Text
-                  style={styles.name}
-                >
-                  {tab === "ideas"
-                    ? item.title
-                    : item.name ||
-                      "Investor"}
-                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <Text
+                    style={styles.name}
+                  >
+                    {tab === "ideas"
+                      ? item.title
+                      : item.name ||
+                        "Investor"}
+                  </Text>
+                  {tab === "users" && (item.coins || 0) >= 11000 && (
+                    <Text style={{ fontSize: 13, marginLeft: 5 }}>👑</Text>
+                  )}
+                  {tab === "users" && (item.coins || 0) >= 10500 && (item.coins || 0) < 11000 && (
+                    <Text style={{ fontSize: 13, marginLeft: 5 }}>🧠</Text>
+                  )}
+                </View>
 
                 <Text
                   style={styles.small}
@@ -199,7 +207,7 @@ export default function LeaderboardScreen() {
                   {tab === "ideas"
                     ? item.category ||
                       "Startup"
-                    : "Top Investor"}
+                    : (item.coins || 0) >= 11000 ? "Coin Tycoon" : (item.coins || 0) >= 10500 ? "Quiz Wizard" : "Top Investor"}
                 </Text>
 
               </View>

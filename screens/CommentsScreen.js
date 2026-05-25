@@ -9,6 +9,8 @@ import {
 import { useState, useEffect } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 
+import { Ionicons } from "@expo/vector-icons";
+
 import {
   collection,
   addDoc,
@@ -19,7 +21,7 @@ import {
 } from "firebase/firestore";
 import { db, auth } from "../firebase";
 
-export default function CommentsScreen({ route }) {
+export default function CommentsScreen({ route, navigation }) {
   const { idea } = route.params;
 
   const [comments, setComments] = useState([]);
@@ -81,7 +83,19 @@ export default function CommentsScreen({ route }) {
         colors={["#FF8C94", "#FFB6C1"]}
         style={styles.header}
       >
-        <Text style={styles.heading}>💬 Comments</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 5 }}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={{ marginRight: 10, padding: 3 }}
+          >
+            <Ionicons
+              name="arrow-back"
+              size={24}
+              color="#fff"
+            />
+          </TouchableOpacity>
+          <Text style={styles.heading}>💬 Comments</Text>
+        </View>
         <Text style={styles.ideaTitle}>{idea.title}</Text>
       </LinearGradient>
 

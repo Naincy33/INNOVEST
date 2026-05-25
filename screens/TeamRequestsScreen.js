@@ -7,6 +7,8 @@ import {
   Alert,
 } from "react-native";
 
+import { Ionicons } from "@expo/vector-icons";
+
 import {
   useEffect,
   useState,
@@ -27,7 +29,7 @@ import {
   auth,
 } from "../firebase";
 
-export default function TeamRequestsScreen() {
+export default function TeamRequestsScreen({ navigation }) {
 
   const [requests, setRequests] =
     useState([]);
@@ -223,6 +225,17 @@ export default function TeamRequestsScreen() {
         style={styles.header}
       >
 
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons
+            name="arrow-back"
+            size={28}
+            color="#111"
+          />
+        </TouchableOpacity>
+
         <Text
           style={styles.heading}
         >
@@ -412,9 +425,15 @@ const styles =
     },
 
     header: {
-      paddingTop: 65,
+      paddingTop: 55,
       paddingHorizontal: 24,
       paddingBottom: 10,
+    },
+
+    backBtn: {
+      marginBottom: 15,
+      alignSelf: "flex-start",
+      padding: 5,
     },
 
     heading: {
