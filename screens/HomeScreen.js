@@ -220,7 +220,7 @@ export default function HomeScreen({
       console.log(err);
 
       alert(
-        "Something went wrong 😢"
+        "Error: " + err.message
       );
     }
   };
@@ -319,7 +319,7 @@ export default function HomeScreen({
         console.log(err);
 
         alert(
-          "Something went wrong 😢"
+          "Error: " + err.message
         );
       }
     };
@@ -409,6 +409,10 @@ export default function HomeScreen({
       } catch (err) {
 
         console.log(err);
+
+        alert(
+          "Error: " + err.message
+        );
       }
     };
 
@@ -480,6 +484,10 @@ export default function HomeScreen({
       } catch (err) {
 
         console.log(err);
+
+        alert(
+          "Error: " + err.message
+        );
       }
     };
 
@@ -556,7 +564,7 @@ export default function HomeScreen({
               styles.quizText
             }
           >
-            🎮 Play Daily Quiz
+            🏆 Play Finance Arcade & Earn Coins 🎮
           </Text>
 
         </TouchableOpacity>
@@ -976,11 +984,15 @@ const styles =
 
     quizBtn: {
       backgroundColor:
-        "#111",
+        "#FF6B6B",
       marginTop: 18,
       padding: 18,
       borderRadius: 22,
       alignItems: "center",
+      shadowColor: "#FF6B6B",
+      shadowOpacity: 0.25,
+      shadowRadius: 8,
+      elevation: 4,
     },
 
     quizText: {

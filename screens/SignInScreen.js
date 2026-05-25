@@ -6,9 +6,13 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StatusBar,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from "react-native";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import {
   signInWithEmailAndPassword,
@@ -47,6 +51,26 @@ export default function SignInScreen({
 
   const [isSubmitting, setIsSubmitting] =
     useState(false);
+
+  const [rememberMe, setRememberMe] =
+    useState(false);
+
+  // 💾 PRE-FILL SAVED EMAIL
+  useEffect(() => {
+    const loadSavedEmail = async () => {
+      try {
+        const savedEmail = await AsyncStorage.getItem("saved_email");
+        const savedRemember = await AsyncStorage.getItem("remember_me");
+        if (savedEmail && savedRemember === "true") {
+          setEmail(savedEmail);
+          setRememberMe(true);
+        }
+      } catch (err) {
+        console.log("Failed to load saved email", err);
+      }
+    };
+    loadSavedEmail();
+  }, []);
 
   // 🔥 CLEAN EMAIL/PASSWORD
   const normalizedEmail =
@@ -163,6 +187,15 @@ export default function SignInScreen({
 
       // ✅ CREATE PROFILE IF MISSING
       await ensureUserProfile(user);
+
+      // 💾 SAVE/CLEAR EMAIL ON SUCCESS
+      if (rememberMe) {
+        await AsyncStorage.setItem("saved_email", normalizedEmail);
+        await AsyncStorage.setItem("remember_me", "true");
+      } else {
+        await AsyncStorage.removeItem("saved_email");
+        await AsyncStorage.setItem("remember_me", "false");
+      }
 
       // ✅ LOGIN SUCCESS
       navigation.replace(
@@ -333,120 +366,134 @@ export default function SignInScreen({
 
   return (
 
-    <View style={styles.container}>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
 
-      <StatusBar
-        barStyle="dark-content"
-      />
+      <View style={styles.container}>
 
-      {/* 🔥 CONTENT */}
-      <View style={styles.content}>
+        <StatusBar
+          barStyle="dark-content"
+        />
 
-        {/* 🔥 HEADER */}
-        <View style={styles.header}>
+        {/* 🔥 CONTENT */}
+        <View style={styles.content}>
 
-          <Text style={styles.heading}>
-            Sign In
-          </Text>
+          {/* 🔥 HEADER */}
+          <View style={styles.header}>
 
-          <Text style={styles.subHeading}>
-            Welcome back to Innovest
-          </Text>
+            <Text style={styles.heading}>
+              Sign In
+            </Text>
 
-        </View>
+            <Text style={styles.subHeading}>
+              Welcome back to Innovest
+            </Text>
 
-        {/* 🔥 EMAIL */}
-        <View style={styles.inputGroup}>
+          </View>
 
-          <Text style={styles.label}>
-            Email
-          </Text>
+          {/* 🔥 EMAIL */}
+          <View style={styles.inputGroup}>
 
-          <TextInput
-            placeholder="name@example.com"
-            placeholderTextColor="#999"
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-          />
-
-        </View>
-
-        {/* 🔥 PASSWORD */}
-        <View style={styles.inputGroup}>
-
-          <Text style={styles.label}>
-            Password
-          </Text>
-
-          <View style={styles.passwordBox}>
+            <Text style={styles.label}>
+              Email
+            </Text>
 
             <TextInput
-              placeholder="••••••••"
+              placeholder="name@example.com"
               placeholderTextColor="#999"
-              secureTextEntry={
-                !showPassword
-              }
-              style={styles.passwordInput}
-              value={password}
-              onChangeText={setPassword}
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
               autoCapitalize="none"
               autoCorrect={false}
+              keyboardType="email-address"
             />
 
-            <TouchableOpacity
-              onPress={() =>
-                setShowPassword(
+          </View>
+
+          {/* 🔥 PASSWORD */}
+          <View style={styles.inputGroup}>
+
+            <Text style={styles.label}>
+              Password
+            </Text>
+
+            <View style={styles.passwordBox}>
+
+              <TextInput
+                placeholder="••••••••"
+                placeholderTextColor="#999"
+                secureTextEntry={
                   !showPassword
-                )
+                }
+                style={styles.passwordInput}
+                value={password}
+                onChangeText={setPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+
+              <TouchableOpacity
+                onPress={() =>
+                  setShowPassword(
+                    !showPassword
+                  )
+                }
+              >
+
+                <Ionicons
+                  name={
+                    showPassword
+                      ? "eye-off"
+                      : "eye"
+                  }
+                  size={22}
+                  color="#888"
+                />
+
+              </TouchableOpacity>
+
+            </View>
+
+          </View>
+
+          {/* 🔥 REMEMBER + FORGOT */}
+          <View style={styles.row}>
+
+            <TouchableOpacity
+              style={styles.rememberBox}
+              onPress={() => setRememberMe(!rememberMe)}
+              activeOpacity={0.7}
+            >
+
+              <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+                {rememberMe && (
+                  <Ionicons
+                    name="checkmark"
+                    size={12}
+                    color="#fff"
+                  />
+                )}
+              </View>
+
+              <Text style={styles.rememberText}>
+                Remember me
+              </Text>
+
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={
+                handleForgotPassword
               }
             >
 
-              <Ionicons
-                name={
-                  showPassword
-                    ? "eye-off"
-                    : "eye"
-                }
-                size={22}
-                color="#888"
-              />
+              <Text style={styles.forgot}>
+                Forgot password?
+              </Text>
 
             </TouchableOpacity>
 
           </View>
-
-        </View>
-
-        {/* 🔥 REMEMBER + FORGOT */}
-        <View style={styles.row}>
-
-          <View style={styles.rememberBox}>
-
-            <View style={styles.checkbox} />
-
-            <Text style={styles.rememberText}>
-              Remember me
-            </Text>
-
-          </View>
-
-          <TouchableOpacity
-            onPress={
-              handleForgotPassword
-            }
-          >
-
-            <Text style={styles.forgot}>
-              Forgot password?
-            </Text>
-
-          </TouchableOpacity>
-
-        </View>
 
         {/* 🔥 LOGIN BUTTON */}
         <TouchableOpacity
@@ -493,9 +540,11 @@ export default function SignInScreen({
 
         </TouchableOpacity>
 
+        </View>
+
       </View>
 
-    </View>
+    </TouchableWithoutFeedback>
   );
 }
 
@@ -630,14 +679,28 @@ const styles = StyleSheet.create({
   },
 
   checkbox: {
-    width: 18,
-    height: 18,
+    width: 20,
+    height: 20,
 
-    borderRadius: 5,
+    borderRadius: 6,
 
-    backgroundColor: "#333",
+    borderWidth: 2,
+
+    borderColor: "#D8D1C7",
+
+    backgroundColor: "#FFFFFF",
 
     marginRight: 10,
+
+    justifyContent: "center",
+
+    alignItems: "center",
+  },
+
+  checkboxChecked: {
+    backgroundColor: "#FF6B6B",
+
+    borderColor: "#FF6B6B",
   },
 
   rememberText: {

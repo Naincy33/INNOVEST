@@ -33,6 +33,8 @@ import CommentsScreen from "../screens/CommentsScreen";
 
 import TeamRequestsScreen from "../screens/TeamRequestsScreen";
 
+import ChatScreen from "../screens/ChatScreen";
+
 const Stack =
   createNativeStackNavigator();
 
@@ -291,6 +293,13 @@ export default function AppNavigator() {
           name="TeamRequests"
           component={
             TeamRequestsScreen
+          }
+        />
+
+        <Stack.Screen
+          name="Chat"
+          component={
+            ChatScreen
           }
         />
 
