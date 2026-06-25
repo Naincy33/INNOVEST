@@ -1,73 +1,123 @@
-# 🚀 Innovest – AI Powered Idea Investing App
+# 🚀 Innovest
 
-Innovest is a modern mobile application where users can **share startup ideas, invest virtual coins, collaborate with teams, and track portfolio growth**.
+<h3 align="center">
+AI Powered Startup Idea Investment & Collaboration Platform
+</h3>
 
-The platform combines **innovation, social interaction, gamification, and investment simulation** to create an engaging ecosystem for aspiring entrepreneurs and investors.
+<p align="center">
+Share • Invest • Collaborate • Learn
+</p>
 
----
+<p align="center">
 
-# ✨ Features
+![React Native](https://img.shields.io/badge/React%20Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
+![Expo](https://img.shields.io/badge/Expo-000020?style=for-the-badge&logo=expo)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
-## 💡 Idea Sharing
-- Post startup ideas with:
-  - Title
-  - Category
-  - Problem Statement
-  - Solution
-- AI-style prediction score & market demand indicators
-
-## ❤️ Community Engagement
-- Like ideas
-- Comment on posts
-- Trending badges for popular ideas
-- Interactive social feed UI
-
-## 💰 Virtual Investment System
-- Invest virtual coins into ideas
-- Portfolio earnings tracking
-- ROI calculations
-- Dynamic growth indicators
-
-## 📊 Portfolio Analytics
-- Investment trend graph
-- Total invested amount
-- Total earnings overview
-- Smart investment insights
-
-## 🤝 Team Collaboration
-- Send team join requests
-- Accept / reject requests
-- Reward system with bonus coins
-
-## 🏆 Leaderboard System
-- Top investors ranking
-- Most popular ideas
-- Competitive engagement system
-
-## 🔐 Authentication
-- Firebase Email Authentication
-- Email verification support
-- Persistent login system
-
-## 🎨 Modern UI/UX
-- Soft pastel custom theme
-- Animated floating navigation
-- Responsive card-based layout
-- Instagram-inspired interactions
+</p>
 
 ---
 
-# 🛠️ Tech Stack
+# 📖 About
+
+Innovest is an AI-powered startup idea investment and collaboration platform built using **React Native** and **Firebase**.
+
+Instead of investing real money, users receive **virtual coins** to invest in innovative startup ideas, analyze AI-generated market insights, collaborate with founders, improve financial literacy through interactive games, and monitor investment performance.
+
+The platform combines **Entrepreneurship + Social Networking + Gamification + Investment Simulation** into one mobile application.
+
+---
+
+# ✨ Key Features
+
+### 💡 Startup Idea Sharing
+
+- Post startup ideas
+- Category-wise ideas
+- Problem & Solution description
+- AI-powered market analysis
+
+---
+
+### 🤖 AI Market Analysis
+
+Every startup idea receives:
+
+- 📈 Success Rate
+- 🔥 Market Demand
+- ⚠ Risk Level
+
+---
+
+### 💰 Virtual Investment
+
+- Invest virtual coins
+- Support startup ideas
+- Portfolio tracking
+- ROI calculation
+
+---
+
+### 📊 Portfolio Analytics
+
+- Investment History
+- ROI
+- Earnings
+- Investment Trend Graph
+
+---
+
+### 🏆 Leaderboard
+
+- Top Investors
+- Coin Rankings
+- Community Engagement
+
+---
+
+### 🎮 Finance Arcade
+
+- Daily Finance Quiz
+- Market Predictor
+- Vocabulary Builder
+
+Users earn virtual coins while improving financial knowledge.
+
+---
+
+### 🤝 Team Collaboration
+
+- Join startup teams
+- Send requests
+- Accept/Reject requests
+
+---
+
+### 🔐 Authentication
+
+- Firebase Authentication
+- Secure Login
+- Persistent Sessions
+
+---
+
+# 🛠 Tech Stack
 
 ## Frontend
+
 - React Native
 - Expo
 
-## Backend & Database
+## Backend
+
 - Firebase Authentication
 - Cloud Firestore
+- Firebase Storage
 
-## Libraries & Tools
+## Libraries
+
 - React Navigation
 - React Native Chart Kit
 - Expo Linear Gradient
@@ -75,35 +125,91 @@ The platform combines **innovation, social interaction, gamification, and invest
 
 ---
 
-# 📱 Screens
+# 📱 Application Screens
 
-- 🏠 Home Feed
-- ➕ Post Idea
-- 💼 Portfolio
-- 🏆 Leaderboard
-- 👤 Profile
-- 💬 Comments
-- 🤝 Team Requests
-- 🧠 Quiz Section
+## Splash Screen
+
+![](screenshots/splashscreen.jpeg)
 
 ---
 
-# ⚙️ Installation
+## Login
 
-## 1️⃣ Clone Repository
+![](screenshots/signin.jpeg)
 
-```bash
-git clone https://github.com/Naincy33/innovest.git
-cd innovest
+---
+
+## Home / Discover Ideas
+
+![](screenshots/dashboard.jpeg)
+
+---
+
+## Portfolio
+
+![](screenshots/portfolio.jpeg)
+
+---
+
+## Leaderboard
+
+![](screenshots/leaderboard.jpeg)
+
+---
+
+## Finance Arcade
+
+![](screenshots/gaming.jpeg)
+
+---
+
+## Profile
+
+![](screenshots/profile.jpeg)
+
+---
+
+# 📂 Project Structure
+
+```
+Innovest
+│
+├── assets
+├── components
+├── constants
+├── hooks
+├── navigation
+├── screens
+├── screenshots
+├── utils
+├── firebase.js
+├── App.js
+└── package.json
 ```
 
-## 2️⃣ Install Dependencies
+---
+
+# ⚙ Installation
+
+Clone Repository
+
+```bash
+git clone https://github.com/Naincy33/INNOVEST.git
+```
+
+Move into Project
+
+```bash
+cd INNOVEST
+```
+
+Install Packages
 
 ```bash
 npm install
 ```
 
-## 3️⃣ Start Development Server
+Run Project
 
 ```bash
 npx expo start
@@ -111,68 +217,75 @@ npx expo start
 
 ---
 
-# 🔐 Environment Variables
+# 🔥 Firebase Configuration
 
-Create a `.env` file in the root directory:
+Enable:
 
-```env
-OPENAI_API_KEY=your_api_key_here
-```
+- Firebase Authentication
+- Cloud Firestore
+- Firebase Storage
 
-⚠️ Never push `.env` files to GitHub.
-
----
-
-# 🔥 Firebase Setup
-
-1. Create a Firebase Project
-2. Enable:
-   - Authentication → Email/Password
-   - Cloud Firestore
-3. Add Firebase config inside `firebase.js`
-
-Example:
-
-```js
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-};
-```
+Create a firebase.js file with your Firebase configuration.
 
 ---
 
 # 📊 Firestore Collections
 
-- users
-- ideas
-- comments
-- investments
-- teamRequests
+```
+users
+ideas
+comments
+investments
+teamRequests
+notifications
+```
 
 ---
 
-# 🚀 Future Improvements
+# 🚀 Future Enhancements
 
-- 🔔 Push Notifications
-- 🤖 AI-powered idea recommendations
-- 👥 Real-time chat system
-- 📈 Advanced analytics dashboard
-- 🌎 Public investor profiles
-- 🧵 Threaded comments & replies
-- 🎯 Smart recommendation engine
+- AI Recommendation Engine
+- Push Notifications
+- Real-time Chat
+- Startup Mentorship
+- Investor Dashboard
+- Advanced Analytics
+- Startup Funding Marketplace
 
 ---
 
+# 🎯 Learning Outcomes
 
+This project helped in understanding:
 
+- Mobile Application Development
+- React Native
+- Firebase Integration
+- Authentication
+- Cloud Firestore
+- State Management
+- UI/UX Design
+- Portfolio Analytics
+- Gamification Concepts
 
-GitHub:
+---
+
+# 👩‍💻 Developer
+
+**Naincy**
+
+B.Tech Computer Science Engineering
+
+React Native Developer | AI Enthusiast | Full Stack Learner
+
+GitHub
+
 https://github.com/Naincy33
 
 ---
 
-# 📜 License
+# ⭐ If you found this project useful
 
-This project is licensed under the MIT License.
+Please consider giving this repository a ⭐
+
+It motivates me to build more projects.
